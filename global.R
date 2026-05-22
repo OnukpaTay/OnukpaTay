@@ -50,7 +50,9 @@ DEFAULT_SETTINGS <- list(
   overhead_pct    = 12,
   profit_pct      = 8,
   prelims_pct     = 7,            # Prelims as % of measured works
-  contingency_pct = 5             # Contingency as % of measured + prelims
+  contingency_pct = 5,            # Contingency as % of measured + prelims
+  markup_pct      = 20,           # Tender markup over prime cost (BOQ dual-column)
+  disclaimer_text = "The above amount is exclusive of VAT, firefighting system, lift installation and any specialist works not specifically priced herein."
 )
 
 # Lookup tables (loaded from /data) ------------------------------------------

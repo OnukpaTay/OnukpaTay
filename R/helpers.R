@@ -13,15 +13,18 @@ boq_compute_amount <- function(df) {
     )
 }
 
-#' Summarise a BOQ data frame by trade.
+#' Summarise a BOQ data frame by trade in SMM7 construction-sequence order
+#' (D Groundwork, E In situ concrete, F Masonry, ...).
 boq_summary_by_trade <- function(df) {
-  df %>%
+  out <- df %>%
     boq_compute_amount() %>%
     dplyr::group_by(trade) %>%
     dplyr::summarise(items = dplyr::n(),
                      total = sum(.data$amount, na.rm = TRUE),
-                     .groups = "drop") %>%
-    dplyr::arrange(dplyr::desc(.data$total))
+                     .groups = "drop")
+  if (nrow(out))
+    out <- out[order_trades_smm7(out$trade), , drop = FALSE]
+  out
 }
 
 #' Build the workbook header for a printable BOQ / Certificate / Claim.
@@ -399,14 +402,28 @@ write_subcontractor_ipc <- function(file, settings, project, scope,
 }
 
 
-#' Save an editable BOQ data frame as an Excel workbook with a header block
-#' (project / client / location / date) and trade collections - matches the
-#' Peduase template convention.
+#' Order trades using SMM7 section letter prefix where present.
+#' e.g. "D. Groundwork" sorts before "E. In situ concrete" before "F. Masonry"
+#' Trades without a recognisable section letter fall back to alphabetical.
+order_trades_smm7 <- function(trades) {
+  # Extract leading section code: D, E, F, ..., or D20, E10, etc.
+  prefix <- toupper(sub("^\\s*([A-Z][A-Z]?[0-9]*)\\b.*$", "\\1", trades))
+  # Treat non-SMM7-coded trades as section "Z" so they sort last
+  has_code <- grepl("^[A-Z]", prefix)
+  prefix[!has_code] <- "Z"
+  order(prefix, trades)
+}
+
+#' Save an editable BOQ data frame as an Excel workbook formatted to mirror
+#' the user's hand-prepared format - PRIME COST + MARKUP dual columns,
+#' SMM7-ordered trades, Qty before Unit, and a disclaimer at the foot.
 write_boq_xlsx <- function(boq_df, settings, project, file,
                            client = "", location = "",
                            date = Sys.Date(),
                            prelims_pct = settings$prelims_pct %||% 7,
-                           contingency_pct = settings$contingency_pct %||% 5) {
+                           contingency_pct = settings$contingency_pct %||% 5,
+                           markup_pct = settings$markup_pct %||% 20,
+                           disclaimer = settings$disclaimer_text %||% "") {
   wb <- openxlsx::createWorkbook()
   sym <- settings$currency_symbol
   openxlsx::addWorksheet(wb, "BOQ")
@@ -414,15 +431,26 @@ write_boq_xlsx <- function(boq_df, settings, project, file,
   hdr_style   <- openxlsx::createStyle(textDecoration = "bold",
                                        fgFill = "#1f4e79", fontColour = "white",
                                        halign = "center",
-                                       border = "TopBottomLeftRight")
+                                       border = "TopBottomLeftRight",
+                                       wrapText = TRUE)
+  banner_s    <- openxlsx::createStyle(textDecoration = "bold",
+                                       halign = "center",
+                                       fgFill = "#bdd7ee")
   money_style <- openxlsx::createStyle(numFmt = paste0('"', sym, ' "#,##0.00'))
   trade_style <- openxlsx::createStyle(textDecoration = "bold",
                                        fgFill = "#d9e2f3")
   coll_style  <- openxlsx::createStyle(textDecoration = "bold",
                                        fgFill = "#fff2cc")
   title_style <- openxlsx::createStyle(textDecoration = "bold", fontSize = 13)
+  total_style <- openxlsx::createStyle(textDecoration = "bold",
+                                       fgFill = "#ffe699")
+  disc_style  <- openxlsx::createStyle(fontSize = 10, textDecoration = "italic",
+                                       wrapText = TRUE)
 
-  # Header block
+  use_markup <- as_num(markup_pct) > 0
+  markup_factor <- 1 + as_num(markup_pct) / 100
+
+  # ---- Header block ----------------------------------------------------
   meta <- c(
     sprintf("PROJECT:   %s", project),
     sprintf("CLIENT:    %s", client %||% ""),
@@ -433,27 +461,57 @@ write_boq_xlsx <- function(boq_df, settings, project, file,
   for (i in seq_along(meta))
     openxlsx::writeData(wb, "BOQ", meta[i], startRow = i, startCol = 1)
   openxlsx::addStyle(wb, "BOQ", title_style, rows = 1, cols = 1)
-  start_row <- length(meta) + 2
 
-  # Column header row
-  openxlsx::writeData(wb, "BOQ",
-                      data.frame(Item = "Item", Description = "Description",
-                                 Unit = "Unit", Quantity = "Quantity",
-                                 Rate = sprintf("Rate (%s)", sym),
-                                 Amount = sprintf("Amount (%s)", sym)),
-                      startRow = start_row, startCol = 1, colNames = FALSE)
-  openxlsx::addStyle(wb, "BOQ", hdr_style, rows = start_row, cols = 1:6,
-                     gridExpand = TRUE)
+  # PRIME COST / MARKUP banner row (row 6)
+  if (use_markup) {
+    openxlsx::writeData(wb, "BOQ", "PRIME COST", startRow = 6, startCol = 6)
+    openxlsx::writeData(wb, "BOQ",
+                        sprintf("%.0f%% MARKUP", as_num(markup_pct)),
+                        startRow = 6, startCol = 8)
+    openxlsx::addStyle(wb, "BOQ", banner_s, rows = 6, cols = 5:6,
+                       gridExpand = TRUE, stack = TRUE)
+    openxlsx::addStyle(wb, "BOQ", banner_s, rows = 6, cols = 7:8,
+                       gridExpand = TRUE, stack = TRUE)
+  }
+  start_row <- 8
 
+  # ---- Column headers --------------------------------------------------
+  # Order matches user's BOQ: Item | Description | QTY | UNIT | RATE | AMOUNT
+  # When markup enabled, two more columns: RATE | AMOUNT (marked-up)
+  if (use_markup) {
+    openxlsx::writeData(wb, "BOQ",
+                        data.frame(c1 = "ITEM", c2 = "DESCRIPTION",
+                                   c3 = "QTY", c4 = "UNIT",
+                                   c5 = "RATE",
+                                   c6 = sprintf("AMOUNT %s", sym),
+                                   c7 = "RATE",
+                                   c8 = sprintf("AMOUNT %s", sym)),
+                        startRow = start_row, startCol = 1, colNames = FALSE)
+    openxlsx::addStyle(wb, "BOQ", hdr_style, rows = start_row, cols = 1:8,
+                       gridExpand = TRUE)
+  } else {
+    openxlsx::writeData(wb, "BOQ",
+                        data.frame(c1 = "ITEM", c2 = "DESCRIPTION",
+                                   c3 = "QTY", c4 = "UNIT",
+                                   c5 = "RATE",
+                                   c6 = sprintf("AMOUNT %s", sym)),
+                        startRow = start_row, startCol = 1, colNames = FALSE)
+    openxlsx::addStyle(wb, "BOQ", hdr_style, rows = start_row, cols = 1:6,
+                       gridExpand = TRUE)
+  }
+
+  # ---- Items grouped by trade (SMM7-ordered) ---------------------------
   r <- start_row + 1
   trade_groups <- split(boq_df, boq_df$trade)
-  grand <- 0
+  trade_groups <- trade_groups[order_trades_smm7(names(trade_groups))]
+  grand_prime  <- 0
+  grand_markup <- 0
 
   for (tg in names(trade_groups)) {
     # Trade group banner
-    openxlsx::writeData(wb, "BOQ", tg,
-                        startRow = r, startCol = 2)
-    openxlsx::addStyle(wb, "BOQ", trade_style, rows = r, cols = 1:6,
+    openxlsx::writeData(wb, "BOQ", tg, startRow = r, startCol = 2)
+    openxlsx::addStyle(wb, "BOQ", trade_style, rows = r,
+                       cols = if (use_markup) 1:8 else 1:6,
                        gridExpand = TRUE)
     r <- r + 1
 
@@ -463,9 +521,9 @@ write_boq_xlsx <- function(boq_df, settings, project, file,
                           startRow = r, startCol = 1)
       openxlsx::writeData(wb, "BOQ", as.character(sub$description[i]),
                           startRow = r, startCol = 2)
-      openxlsx::writeData(wb, "BOQ", as.character(sub$unit[i]),
-                          startRow = r, startCol = 3)
       openxlsx::writeData(wb, "BOQ", sub$quantity[i],
+                          startRow = r, startCol = 3)
+      openxlsx::writeData(wb, "BOQ", as.character(sub$unit[i]),
                           startRow = r, startCol = 4)
       openxlsx::writeData(wb, "BOQ", sub$rate[i],
                           startRow = r, startCol = 5)
@@ -473,49 +531,103 @@ write_boq_xlsx <- function(boq_df, settings, project, file,
                           startRow = r, startCol = 6)
       openxlsx::addStyle(wb, "BOQ", money_style, rows = r, cols = c(5, 6),
                          gridExpand = TRUE, stack = TRUE)
+      if (use_markup) {
+        marked_rate   <- round(sub$rate[i]   * markup_factor, 2)
+        marked_amount <- round(sub$amount[i] * markup_factor, 2)
+        openxlsx::writeData(wb, "BOQ", marked_rate,
+                            startRow = r, startCol = 7)
+        openxlsx::writeData(wb, "BOQ", marked_amount,
+                            startRow = r, startCol = 8)
+        openxlsx::addStyle(wb, "BOQ", money_style, rows = r, cols = c(7, 8),
+                           gridExpand = TRUE, stack = TRUE)
+      }
       r <- r + 1
     }
 
-    sub_total <- sum(sub$amount, na.rm = TRUE)
-    openxlsx::writeData(wb, "BOQ", paste("Carried to collection -", tg),
+    sub_total_prime <- sum(sub$amount, na.rm = TRUE)
+    sub_total_mark  <- if (use_markup) sub_total_prime * markup_factor else NA
+    openxlsx::writeData(wb, "BOQ",
+                        paste("Carried to collection -", tg),
                         startRow = r, startCol = 2)
-    openxlsx::writeData(wb, "BOQ", sub_total, startRow = r, startCol = 6)
-    openxlsx::addStyle(wb, "BOQ", coll_style, rows = r, cols = 1:6,
+    openxlsx::writeData(wb, "BOQ", sub_total_prime, startRow = r, startCol = 6)
+    openxlsx::addStyle(wb, "BOQ", coll_style, rows = r,
+                       cols = if (use_markup) 1:8 else 1:6,
                        gridExpand = TRUE, stack = TRUE)
-    openxlsx::addStyle(wb, "BOQ", money_style, rows = r, cols = 6, stack = TRUE)
+    openxlsx::addStyle(wb, "BOQ", money_style, rows = r, cols = 6,
+                       stack = TRUE)
+    if (use_markup) {
+      openxlsx::writeData(wb, "BOQ", round(sub_total_mark, 2),
+                          startRow = r, startCol = 8)
+      openxlsx::addStyle(wb, "BOQ", money_style, rows = r, cols = 8,
+                         stack = TRUE)
+      grand_markup <- grand_markup + sub_total_mark
+    }
     r <- r + 2
-    grand <- grand + sub_total
+    grand_prime <- grand_prime + sub_total_prime
   }
 
-  # Grand summary block
+  # ---- General Summary block ------------------------------------------
   r <- r + 1
-  openxlsx::writeData(wb, "BOQ", "GRAND SUMMARY", startRow = r, startCol = 1)
-  openxlsx::addStyle(wb, "BOQ", title_style, rows = r, cols = 1); r <- r + 1
+  openxlsx::writeData(wb, "BOQ", "GENERAL SUMMARY", startRow = r, startCol = 1)
+  openxlsx::addStyle(wb, "BOQ", title_style, rows = r, cols = 1); r <- r + 2
 
-  prelims      <- grand * as_num(prelims_pct) / 100
-  subtotal_2   <- grand + prelims
-  contingency  <- subtotal_2 * as_num(contingency_pct) / 100
-  grand_total  <- subtotal_2 + contingency
+  prelims_p     <- grand_prime * as_num(prelims_pct) / 100
+  subtotal_2_p  <- grand_prime + prelims_p
+  contingency_p <- subtotal_2_p * as_num(contingency_pct) / 100
+  grand_total_p <- subtotal_2_p + contingency_p
+
+  prelims_m     <- if (use_markup) grand_markup * as_num(prelims_pct) / 100
+                   else NA
+  subtotal_2_m  <- if (use_markup) grand_markup + prelims_m else NA
+  contingency_m <- if (use_markup) subtotal_2_m * as_num(contingency_pct) / 100
+                   else NA
+  grand_total_m <- if (use_markup) subtotal_2_m + contingency_m else NA
 
   for (kv in list(
-    list("Measured works (sum of trades)", grand),
-    list(sprintf("Preliminaries @ %.1f%%", as_num(prelims_pct)), prelims),
-    list("Sub-total 1",                    subtotal_2),
-    list(sprintf("Contingency @ %.1f%%", as_num(contingency_pct)), contingency),
-    list("GRAND TOTAL COST OF WORKS",      grand_total)
+    list("MEASURED WORKS (sum of trades)", grand_prime, grand_markup),
+    list(sprintf("ADD PRELIMINARIES @ %.1f%%", as_num(prelims_pct)),
+         prelims_p, prelims_m),
+    list("SUB-TOTAL",                 subtotal_2_p, subtotal_2_m),
+    list(sprintf("ADD CONTINGENCY @ %.1f%%", as_num(contingency_pct)),
+         contingency_p, contingency_m),
+    list("TOTAL COST OF WORKS",       grand_total_p, grand_total_m)
   )) {
     openxlsx::writeData(wb, "BOQ", kv[[1]], startRow = r, startCol = 2)
-    openxlsx::writeData(wb, "BOQ", kv[[2]], startRow = r, startCol = 6)
+    openxlsx::writeData(wb, "BOQ", round(kv[[2]], 2),
+                        startRow = r, startCol = 6)
     openxlsx::addStyle(wb, "BOQ", money_style, rows = r, cols = 6, stack = TRUE)
+    if (use_markup && !is.na(kv[[3]])) {
+      openxlsx::writeData(wb, "BOQ", round(kv[[3]], 2),
+                          startRow = r, startCol = 8)
+      openxlsx::addStyle(wb, "BOQ", money_style, rows = r, cols = 8,
+                         stack = TRUE)
+    }
     r <- r + 1
   }
-  openxlsx::addStyle(wb, "BOQ",
-                     openxlsx::createStyle(textDecoration = "bold",
-                                           fgFill = "#fff2cc"),
-                     rows = r - 1, cols = 1:6, gridExpand = TRUE, stack = TRUE)
+  openxlsx::addStyle(wb, "BOQ", total_style, rows = r - 1,
+                     cols = if (use_markup) 1:8 else 1:6,
+                     gridExpand = TRUE, stack = TRUE)
 
-  openxlsx::setColWidths(wb, "BOQ", cols = 1:6,
-                         widths = c(8, 60, 8, 12, 14, 18))
+  # ---- Disclaimer ------------------------------------------------------
+  if (nzchar(disclaimer)) {
+    r <- r + 2
+    openxlsx::writeData(wb, "BOQ", "Disclaimer:", startRow = r, startCol = 1)
+    openxlsx::addStyle(wb, "BOQ",
+                       openxlsx::createStyle(textDecoration = "bold"),
+                       rows = r, cols = 1)
+    r <- r + 1
+    openxlsx::writeData(wb, "BOQ", disclaimer, startRow = r, startCol = 1)
+    openxlsx::addStyle(wb, "BOQ", disc_style, rows = r, cols = 1)
+    if (use_markup) {
+      openxlsx::mergeCells(wb, "BOQ", rows = r, cols = 1:8)
+    } else {
+      openxlsx::mergeCells(wb, "BOQ", rows = r, cols = 1:6)
+    }
+  }
+
+  widths <- if (use_markup) c(8, 60, 10, 8, 14, 18, 14, 18) else
+                            c(8, 60, 10, 8, 14, 18)
+  openxlsx::setColWidths(wb, "BOQ", cols = seq_along(widths), widths = widths)
   openxlsx::freezePane(wb, "BOQ", firstActiveRow = start_row + 1)
   openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
 }

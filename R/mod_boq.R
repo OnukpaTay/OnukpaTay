@@ -17,17 +17,27 @@ mod_boq_ui <- function(id) {
         bslib::layout_columns(
           col_widths = c(6, 6),
           textInput(ns("project_name"),  "Project name",
-                    value = "Proposed 3-Bedroom Bungalow at East Legon"),
+                    value = "Proposed Multi-Storey Shop Complex"),
           textInput(ns("project_ref"),   "Project / job no",
                     value = make_ref("JOB", 1)),
-          textInput(ns("employer"),      "Employer / Client", value = ""),
+          textInput(ns("employer"),      "Client / Employer", value = "Diana Williams"),
           textInput(ns("contractor"),    "Contractor (if priced)", value = ""),
-          textInput(ns("location"),      "Location", value = "Accra, Ghana"),
+          textInput(ns("location"),      "Location",
+                    value = "Kwabenya - Greater Accra"),
           dateInput(ns("date"), "BOQ date", value = Sys.Date())
+        ),
+        bslib::layout_columns(
+          col_widths = c(4, 4, 4),
+          numericInput(ns("markup_pct"), "Tender markup % (0 = single column)",
+                       value = 20, min = 0, max = 100, step = 1),
+          numericInput(ns("prelims_pct"), "Preliminaries %",
+                       value = 7, min = 0, max = 30, step = 0.5),
+          numericInput(ns("contingency_pct"), "Contingency %",
+                       value = 5, min = 0, max = 30, step = 0.5)
         )
       ),
       bslib::value_box(
-        title    = "BOQ grand total",
+        title    = "BOQ grand total (prime cost)",
         value    = textOutput(ns("grand_total")),
         showcase = bsicons::bs_icon("cash-stack"),
         theme    = "primary"
@@ -153,7 +163,9 @@ mod_boq_server <- function(id, settings, app_state) {
 
     # Editable DataTable ---------------------------------------------------
     output$boq_table <- DT::renderDT({
-      df <- boq() %>% boq_compute_amount()
+      df <- boq() %>% boq_compute_amount() %>%
+        dplyr::select(.data$item_no, .data$trade, .data$description,
+                      .data$quantity, .data$unit, .data$rate, .data$amount)
       DT::datatable(
         df,
         editable = list(target = "cell",
@@ -161,7 +173,8 @@ mod_boq_server <- function(id, settings, app_state) {
         selection = "multiple",
         rownames = FALSE,
         options = dt_editable_opts(),
-        colnames = c("Item", "Trade", "Description", "Unit", "Qty", "Rate", "Amount")
+        colnames = c("Item", "Trade / Section", "Description",
+                     "Qty", "Unit", "Rate", "Amount")
       ) %>%
         DT::formatCurrency(c("rate", "amount"),
                            currency = paste0(settings$currency_symbol, " "),
@@ -172,13 +185,16 @@ mod_boq_server <- function(id, settings, app_state) {
     observeEvent(input$boq_table_cell_edit, {
       info <- input$boq_table_cell_edit
       df <- boq()
-      row <- info$row
-      col <- info$col + 1  # DT 0-indexed
-      cur_names <- names(df)
-      if (cur_names[col] %in% c("quantity", "rate")) {
-        df[row, col] <- as_num(info$value)
+      # Display order is item_no, trade, description, quantity, unit, rate
+      # but underlying data order is item_no, trade, description, unit,
+      # quantity, rate - so map by name not position.
+      display_to_data <- c("item_no", "trade", "description",
+                           "quantity", "unit", "rate")
+      col_name <- display_to_data[info$col + 1]
+      if (col_name %in% c("quantity", "rate")) {
+        df[info$row, col_name] <- as_num(info$value)
       } else {
-        df[row, col] <- info$value
+        df[info$row, col_name] <- info$value
       }
       boq(df)
     })
@@ -238,8 +254,10 @@ mod_boq_server <- function(id, settings, app_state) {
                        client = input$employer,
                        location = input$location,
                        date = input$date,
-                       prelims_pct = settings$prelims_pct,
-                       contingency_pct = settings$contingency_pct)
+                       prelims_pct = input$prelims_pct,
+                       contingency_pct = input$contingency_pct,
+                       markup_pct = input$markup_pct,
+                       disclaimer = settings$disclaimer_text)
       }
     )
 

@@ -1,27 +1,29 @@
 item_no,trade,description,unit,quantity,rate
-A1,Preliminaries,Allow for site establishment including site office stores and welfare facilities,item,1,45000
-A2,Preliminaries,Allow for insurance bonds and statutory permits,item,1,28000
-A3,Preliminaries,Allow for safety health and environment compliance throughout,item,1,18500
-B1,Substructure - Excavation and Earthworks,Excavate to reduce levels not exceeding 1.50m deep,m3,180,65
-B2,Substructure - Excavation and Earthworks,Excavate column bases not exceeding 1.50m deep,m3,42,85
-B3,Substructure - Excavation and Earthworks,Backfill selected excavated material around foundations,m3,90,45
-C1,Substructure - Concrete Works,50mm thick blinding concrete grade C15/20 under bases,m2,85,95
-C2,Substructure - Concrete Works,Reinforced concrete grade C25/30 in column bases,m3,28,1850
-C3,Substructure - Concrete Works,Reinforced concrete grade C25/30 in ground beams 225x450mm,m3,18,1950
-D1,Masonry,225mm thick sandcrete blockwork in foundation walling,m2,165,165
-D2,Masonry,225mm thick sandcrete blockwork in external walls above DPC,m2,420,180
-D3,Masonry,150mm thick sandcrete blockwork in internal partitions,m2,310,140
-E1,Roofing,Long span aluzinc roofing sheet 0.45mm gauge,m2,285,320
-E2,Roofing,Treated softwood purlins 50x75mm at 600mm centres,m,520,42
-F1,Plastering and Wall Finishings,15mm thick cement and sand plaster 1:4 on internal walls,m2,840,55
-F2,Floor Finishings,600x600mm ceramic floor tiles on cement screed,m2,310,210
-F3,Ceiling Finishings,Suspended PVC ceiling on aluminium grid,m2,310,180
-F4,Painting and Decorating,Three coats vinyl emulsion paint on plastered internal walls,m2,840,42
-G1,Plumbing and Sanitary,Close-coupled WC suite complete with cistern and seat,nr,6,1850
-G2,Plumbing and Sanitary,Wash hand basin with pillar taps complete,nr,6,1250
-H1,Electrical Services,13A single switched socket outlet complete,nr,48,180
-H2,Electrical Services,LED panel light 600x600mm recessed,nr,32,420
-J1,Provisional Sums,Provisional sum for landscaping works,sum,1,35000
-J2,Provisional Sums,Provisional sum for borehole and overhead tank,sum,1,55000
-K1,Dayworks,Allow for dayworks - skilled labour at GHS 250 per day,day,30,250
-K2,Dayworks,Allow for dayworks - unskilled labour at GHS 120 per day,day,60,120
+A1,A. Preliminaries / General Items,Allow for site establishment including site office stores and welfare facilities,item,1,45000
+A2,A. Preliminaries / General Items,Allow for insurance bonds and statutory permits,item,1,28000
+A3,A. Preliminaries / General Items,Allow for safety health and environment compliance throughout,item,1,18500
+A,D. Groundwork,Excavate to reduce levels not exceeding 1.50m deep,m3,180,65
+B,D. Groundwork,Excavate column bases not exceeding 1.50m deep,m3,42,85
+C,D. Groundwork,Backfill selected excavated material around foundations,m3,90,45
+A,E. In situ concrete / Large precast concrete,50mm thick blinding concrete grade C15/20 under bases,m2,85,95
+B,E. In situ concrete / Large precast concrete,Reinforced concrete grade C25/30 in column bases,m3,28,1850
+C,E. In situ concrete / Large precast concrete,Reinforced concrete grade C25/30 in ground beams 225x450mm,m3,18,1950
+A,F. Masonry,225mm thick sandcrete blockwork in foundation walling,m2,165,165
+B,F. Masonry,225mm thick sandcrete blockwork in external walls above DPC,m2,420,180
+C,F. Masonry,150mm thick sandcrete blockwork in internal partitions,m2,310,140
+A,H. Cladding / Covering,Long span aluzinc roofing sheet 0.45mm gauge,m2,285,320
+B,H. Cladding / Covering,Treated softwood purlins 50x75mm at 600mm centres,m,520,42
+A,L. Windows / Doors / Stairs,Aluminium sliding window with 5mm clear glass,m2,32,950
+B,L. Windows / Doors / Stairs,Flush hardwood door 45mm thick with ironmongery,nr,8,1850
+A,M. Surface finishes,15mm thick cement and sand plaster 1:4 on internal walls,m2,840,55
+B,M. Surface finishes,600x600mm ceramic floor tiles on cement screed,m2,310,210
+C,M. Surface finishes,Suspended PVC ceiling on aluminium grid,m2,310,180
+D,M. Surface finishes,Three coats vinyl emulsion paint on plastered internal walls,m2,840,42
+A,R. Disposal systems,Close-coupled WC suite complete with cistern and seat,nr,6,1850
+B,R. Disposal systems,Wash hand basin with pillar taps complete,nr,6,1250
+A,V. Electrical supply / power / lighting,13A single switched socket outlet complete,nr,48,180
+B,V. Electrical supply / power / lighting,LED panel light 600x600mm recessed,nr,32,420
+PS1,Provisional Sums,Provisional sum for landscaping works,sum,1,35000
+PS2,Provisional Sums,Provisional sum for borehole and overhead tank,sum,1,55000
+DW1,Dayworks,Allow for dayworks - skilled labour at GHS 250 per day,day,30,250
+DW2,Dayworks,Allow for dayworks - unskilled labour at GHS 120 per day,day,60,120
