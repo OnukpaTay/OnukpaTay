@@ -109,10 +109,27 @@ mod_boq_server <- function(id, settings, app_state) {
     })
 
     observeEvent(input$load_sample, {
-      if (!is.null(SAMPLE_BOQ_DF)) {
-        boq(SAMPLE_BOQ_DF)
-        showNotification("Sample BOQ loaded.", type = "message")
+      # Try the pre-loaded copy first, then re-read from disk in case
+      # the working directory wasn't set when global.R was sourced.
+      df <- SAMPLE_BOQ_DF
+      if (is.null(df) || !nrow(df)) {
+        df <- tryCatch(
+          readr::read_csv("data/sample_boq.csv", show_col_types = FALSE),
+          error = function(e) NULL
+        )
       }
+      if (is.null(df) || !nrow(df)) {
+        showNotification(
+          paste0("Could not load data/sample_boq.csv. ",
+                 "Working directory is currently: '", getwd(), "'. ",
+                 "Set it to the OnukpaTay project root (where app.R lives) ",
+                 "and reload the app."),
+          type = "error", duration = 15)
+        return()
+      }
+      boq(df)
+      showNotification(sprintf("Sample BOQ loaded - %d items.", nrow(df)),
+                       type = "message")
     })
 
     observeEvent(input$import_csv, {
