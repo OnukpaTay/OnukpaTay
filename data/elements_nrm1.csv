@@ -1,0 +1,49 @@
+element_code,element_group,element,sub_element
+0,0 Facilitating works,Facilitating works,Toxic material treatment / Major demolition / Specialist works
+1.1,1 Substructure,Substructure,Standard foundations
+1.2,1 Substructure,Substructure,Specialist foundations
+1.3,1 Substructure,Substructure,Lowest floor construction
+1.4,1 Substructure,Substructure,Basement excavation
+1.5,1 Substructure,Substructure,Basement retaining walls
+2.1,2 Superstructure,Frame,Steel / Concrete / Timber frame
+2.2,2 Superstructure,Upper floors,Upper floors / Balconies
+2.3,2 Superstructure,Roof,Roof structure / coverings / drainage
+2.4,2 Superstructure,Stairs and ramps,Stair structure / finishes / balustrades
+2.5,2 Superstructure,External walls,External enclosing walls
+2.6,2 Superstructure,Windows and external doors,Windows / External doors
+2.7,2 Superstructure,Internal walls and partitions,Internal walls / partitions
+2.8,2 Superstructure,Internal doors,Internal doors
+3.1,3 Internal finishes,Wall finishes,Wall finishes
+3.2,3 Internal finishes,Floor finishes,Floor finishes
+3.3,3 Internal finishes,Ceiling finishes,Finishes to ceilings
+4.1,4 Fittings furnishings and equipment,Fittings furnishings and equipment,General / domestic / specialist
+5.1,5 Services,Sanitary installations,Sanitary appliances
+5.2,5 Services,Services equipment,Services equipment
+5.3,5 Services,Disposal installations,Foul / Chemical / Refuse / Rainwater
+5.4,5 Services,Water installations,Mains supply / Cold / Hot water distribution
+5.5,5 Services,Heat source,Heat source
+5.6,5 Services,Space heating and air conditioning,HVAC
+5.7,5 Services,Ventilation,General ventilation
+5.8,5 Services,Electrical installations,Power / Lighting / Specialist
+5.9,5 Services,Fuel installations,Fuel installations
+5.10,5 Services,Lift and conveyor installations,Lifts and enclosed hoists
+5.11,5 Services,Fire and lightning protection,Fire fighting / Fire detection / Lightning protection
+5.12,5 Services,Communication security and control,Comms / Security / CCTV / BMS
+5.13,5 Services,Specialist installations,Specialist installations
+5.14,5 Services,Builders work in connection,BWIC
+6.1,6 Prefabricated buildings and units,Prefabricated buildings and units,Prefabricated buildings / Pods
+7.1,7 Work to existing buildings,Minor demolition / alteration,Minor demolition / alteration / improvement
+8.1,8 External works,Site preparation works,Site preparation works
+8.2,8 External works,Roads paths and pavings,Roads paths and pavings
+8.3,8 External works,Soft landscaping planting,Soft landscaping planting and irrigation
+8.4,8 External works,Fencing railings and walls,Fencing railings and walls
+8.5,8 External works,External fixtures,Site / street furniture and equipment
+8.6,8 External works,External drainage,External drainage
+8.7,8 External works,External services,External services
+8.8,8 External works,Minor building works,Ancillary buildings
+9.1,9 Main contractor preliminaries,Main contractor preliminaries,Site establishment / management / services
+10.1,10 Main contractor overheads and profit,Main contractor overheads and profit,OH&P
+11.1,11 Project / design team fees,Project / design team fees,Consultants / specialist fees
+12.1,12 Other development / project costs,Other development / project costs,Statutory fees / planning / charges
+13.1,13 Risks,Design / Construction / Employer / Other risks,Risk allowance
+14.1,14 Inflation,Tender / Construction inflation,Inflation allowance

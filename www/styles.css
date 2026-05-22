@@ -1,0 +1,68 @@
+/* OnukpaTay theme */
+
+.brand-title {
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  font-size: 1.25rem;
+  margin-right: 0.75rem;
+}
+
+.brand-tagline {
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+
+.version-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.bslib-value-box .value-box-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.bslib-value-box .value-box-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.card-header {
+  font-weight: 600;
+  background: #f6f8fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  border-radius: 6px;
+  padding: 4px 10px;
+  border: 1px solid #ced4da;
+}
+
+.doc-header { margin-bottom: 1rem; }
+.doc-title  { color: #1f4e79; margin: 0.5rem 0; }
+
+.btn-primary {
+  background-color: #1f4e79;
+  border-color: #1f4e79;
+}
+.btn-primary:hover {
+  background-color: #163d61;
+  border-color: #163d61;
+}
+
+table.dataTable tbody td.dt-right { text-align: right; }
+
+/* Tighter editable cell hint */
+table.dataTable tbody td[contenteditable="true"] {
+  background-color: #fffdf2;
+  cursor: text;
+}

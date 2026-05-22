@@ -1,0 +1,234 @@
+# Bill of Quantities module
+#
+# Workflow:
+#   1. User sets project details
+#   2. Adds / edits BOQ items (trade, description, unit, qty, rate)
+#   3. Imports from Excel / CSV or starts from a sample BOQ
+#   4. Reviews trade summaries and grand total
+#   5. Exports a priced BOQ to Excel
+
+mod_boq_ui <- function(id) {
+  ns <- NS(id)
+  tagList(
+    bslib::layout_columns(
+      col_widths = c(8, 4),
+      bslib::card(
+        bslib::card_header(bsicons::bs_icon("file-earmark-text"), " Project details"),
+        bslib::layout_columns(
+          col_widths = c(6, 6),
+          textInput(ns("project_name"),  "Project name",
+                    value = "Proposed 3-Bedroom Bungalow at East Legon"),
+          textInput(ns("project_ref"),   "Project / job no",
+                    value = make_ref("JOB", 1)),
+          textInput(ns("employer"),      "Employer / Client", value = ""),
+          textInput(ns("contractor"),    "Contractor (if priced)", value = ""),
+          textInput(ns("location"),      "Location", value = "Accra, Ghana"),
+          dateInput(ns("date"), "BOQ date", value = Sys.Date())
+        )
+      ),
+      bslib::value_box(
+        title    = "BOQ grand total",
+        value    = textOutput(ns("grand_total")),
+        showcase = bsicons::bs_icon("cash-stack"),
+        theme    = "primary"
+      )
+    ),
+    bslib::card(
+      bslib::card_header(
+        bsicons::bs_icon("list-task"),
+        " BOQ items - click any cell to edit"
+      ),
+      bslib::layout_columns(
+        col_widths = c(3, 3, 3, 3),
+        actionButton(ns("add_row"), "Add item",
+                     class = "btn-success", icon = icon("plus")),
+        actionButton(ns("del_row"), "Delete selected",
+                     class = "btn-outline-danger", icon = icon("trash")),
+        fileInput(ns("import_csv"), NULL, accept = ".csv",
+                  buttonLabel = "Import CSV", placeholder = "no file"),
+        actionButton(ns("load_sample"), "Load sample BOQ",
+                     class = "btn-outline-secondary", icon = icon("file-import"))
+      ),
+      DT::DTOutput(ns("boq_table"))
+    ),
+    bslib::layout_columns(
+      col_widths = c(6, 6),
+      bslib::card(
+        bslib::card_header(bsicons::bs_icon("bar-chart"), " Collection by trade"),
+        DT::DTOutput(ns("trade_summary"))
+      ),
+      bslib::card(
+        bslib::card_header(bsicons::bs_icon("calculator"), " Summary page"),
+        DT::DTOutput(ns("summary_page")),
+        downloadButton(ns("export_xlsx"), "Export priced BOQ (Excel)",
+                       class = "btn-primary mt-3"),
+        downloadButton(ns("export_csv"),  "Export raw CSV",
+                       class = "btn-outline-secondary mt-2")
+      )
+    )
+  )
+}
+
+mod_boq_server <- function(id, settings, app_state) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+
+    # Reactive BOQ data ----------------------------------------------------
+    boq <- reactiveVal(
+      tibble::tibble(
+        item_no = character(), trade = character(), description = character(),
+        unit = character(), quantity = numeric(), rate = numeric()
+      )
+    )
+
+    # Share the live BOQ with other modules (IPC, Valuations, etc.)
+    observe({ app_state$boq <- boq() })
+
+    # Add / delete rows ----------------------------------------------------
+    observeEvent(input$add_row, {
+      trades <- TRADE_GROUPS_DF %>%
+        dplyr::filter(.data$standard == settings$measurement_std) %>%
+        dplyr::pull(.data$trade)
+      default_trade <- if (length(trades)) trades[1] else "Preliminaries"
+      new_row <- tibble::tibble(
+        item_no = sprintf("X%02d", nrow(boq()) + 1),
+        trade   = default_trade,
+        description = "New item",
+        unit = "nr", quantity = 1, rate = 0
+      )
+      boq(dplyr::bind_rows(boq(), new_row))
+    })
+
+    observeEvent(input$del_row, {
+      sel <- input$boq_table_rows_selected
+      if (!length(sel)) {
+        showNotification("Select one or more rows first.", type = "warning")
+        return()
+      }
+      boq(boq()[-sel, , drop = FALSE])
+    })
+
+    observeEvent(input$load_sample, {
+      if (!is.null(SAMPLE_BOQ_DF)) {
+        boq(SAMPLE_BOQ_DF)
+        showNotification("Sample BOQ loaded.", type = "message")
+      }
+    })
+
+    observeEvent(input$import_csv, {
+      req(input$import_csv)
+      df <- tryCatch(readr::read_csv(input$import_csv$datapath,
+                                     show_col_types = FALSE),
+                     error = function(e) NULL)
+      if (is.null(df)) {
+        showNotification("Could not read CSV.", type = "error"); return()
+      }
+      required <- c("item_no", "trade", "description", "unit", "quantity", "rate")
+      missing <- setdiff(required, names(df))
+      if (length(missing)) {
+        showNotification(
+          paste("Missing columns:", paste(missing, collapse = ", ")),
+          type = "error"); return()
+      }
+      boq(df[required])
+      showNotification(sprintf("Loaded %d items.", nrow(df)), type = "message")
+    })
+
+    # Editable DataTable ---------------------------------------------------
+    output$boq_table <- DT::renderDT({
+      df <- boq() %>% boq_compute_amount()
+      DT::datatable(
+        df,
+        editable = list(target = "cell",
+                        disable = list(columns = which(names(df) == "amount") - 1)),
+        selection = "multiple",
+        rownames = FALSE,
+        options = dt_editable_opts(),
+        colnames = c("Item", "Trade", "Description", "Unit", "Qty", "Rate", "Amount")
+      ) %>%
+        DT::formatCurrency(c("rate", "amount"),
+                           currency = paste0(settings$currency_symbol, " "),
+                           interval = 3, mark = ",") %>%
+        DT::formatRound("quantity", digits = 2)
+    }, server = FALSE)
+
+    observeEvent(input$boq_table_cell_edit, {
+      info <- input$boq_table_cell_edit
+      df <- boq()
+      row <- info$row
+      col <- info$col + 1  # DT 0-indexed
+      cur_names <- names(df)
+      if (cur_names[col] %in% c("quantity", "rate")) {
+        df[row, col] <- as_num(info$value)
+      } else {
+        df[row, col] <- info$value
+      }
+      boq(df)
+    })
+
+    # Trade summary & grand total ------------------------------------------
+    output$trade_summary <- DT::renderDT({
+      df <- boq_summary_by_trade(boq())
+      if (!nrow(df)) return(DT::datatable(df))
+      DT::datatable(df, rownames = FALSE,
+                    options = list(dom = "t", pageLength = 50),
+                    colnames = c("Trade", "Items", "Total")) %>%
+        DT::formatCurrency("total",
+                           currency = paste0(settings$currency_symbol, " "),
+                           interval = 3, mark = ",")
+    })
+
+    output$summary_page <- DT::renderDT({
+      df <- boq() %>% boq_compute_amount()
+      subtotal <- sum(df$amount, na.rm = TRUE)
+      contingency <- subtotal * 0.05
+      ohp <- subtotal * (settings$overhead_pct + settings$profit_pct) / 100
+      net <- subtotal + contingency + ohp
+      vat <- net * (settings$vat_pct + settings$nhil_getfl_pct) / 100
+      tot <- net + vat
+      rows <- tibble::tibble(
+        Item   = c("Measured works (sum of all trades)",
+                   "Contingency @ 5%",
+                   sprintf("Overheads & profit @ %.1f%%",
+                           settings$overhead_pct + settings$profit_pct),
+                   "Net contract sum",
+                   sprintf("VAT + NHIL + GETFund @ %.1f%%",
+                           settings$vat_pct + settings$nhil_getfl_pct),
+                   "Tender total"),
+        Amount = c(subtotal, contingency, ohp, net, vat, tot)
+      )
+      DT::datatable(rows, rownames = FALSE,
+                    options = list(dom = "t", pageLength = 10)) %>%
+        DT::formatCurrency("Amount",
+                           currency = paste0(settings$currency_symbol, " "),
+                           interval = 3, mark = ",")
+    })
+
+    output$grand_total <- renderText({
+      total <- sum(boq_compute_amount(boq())$amount, na.rm = TRUE)
+      fmt_money(total, settings$currency_symbol)
+    })
+
+    # Exports --------------------------------------------------------------
+    output$export_xlsx <- downloadHandler(
+      filename = function()
+        sprintf("BOQ_%s_%s.xlsx",
+                gsub("[^A-Za-z0-9]+", "_", input$project_ref %||% "project"),
+                format(Sys.Date(), "%Y%m%d")),
+      content = function(file) {
+        df <- boq() %>% boq_compute_amount()
+        write_boq_xlsx(df, settings, input$project_name, file)
+      }
+    )
+
+    output$export_csv <- downloadHandler(
+      filename = function()
+        sprintf("BOQ_%s_%s.csv",
+                gsub("[^A-Za-z0-9]+", "_", input$project_ref %||% "project"),
+                format(Sys.Date(), "%Y%m%d")),
+      content = function(file) {
+        readr::write_csv(boq(), file)
+      }
+    )
+  })
+}

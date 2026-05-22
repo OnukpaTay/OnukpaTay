@@ -1,0 +1,15 @@
+unit,description,category
+nr,Number,Count
+item,Item / lump sum,Count
+m,Linear metre,Length
+mm,Millimetre,Length
+m2,Square metre,Area
+m3,Cubic metre,Volume
+kg,Kilogram,Mass
+t,Tonne,Mass
+hr,Hour,Time
+day,Day,Time
+wk,Week,Time
+mth,Month,Time
+sum,Sum / provisional sum,Money
+%,Percentage,Ratio

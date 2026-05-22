@@ -1,0 +1,34 @@
+Package: OnukpaTay
+Title: OnukpaTay - Professional Quantity Surveyor Assistant
+Version: 0.1.0
+Authors@R: person("Sedem", "Onukpa-Tay", email = "onukpatay@gmail.com", role = c("aut", "cre"))
+Description: An R Shiny application supporting GhIS / RICS quantity surveying
+    practice. Modules cover Bill of Quantities (BOQ) preparation, Interim
+    Payment Certificates (IPC), monthly Valuations & Variations, Contract
+    Claims (EOT, loss & expense), and Budgeting / Cost Planning. Standards
+    supported: RICS NRM1/NRM2/NRM3, SMM7, JCT and FIDIC contract conventions,
+    with Ghana-specific (GhIS) defaults including GHS currency.
+License: MIT
+Encoding: UTF-8
+Imports:
+    shiny (>= 1.7.0),
+    bslib (>= 0.6.0),
+    bsicons,
+    DT,
+    dplyr,
+    tibble,
+    tidyr,
+    readr,
+    purrr,
+    lubridate,
+    scales,
+    openxlsx,
+    rmarkdown,
+    htmltools,
+    shinyjs,
+    jsonlite,
+    ggplot2
+Suggests:
+    knitr,
+    testthat (>= 3.0.0)
+RoxygenNote: 7.3.1

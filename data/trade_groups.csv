@@ -1,0 +1,62 @@
+code,trade,standard,order
+1,Preliminaries,NRM2,1
+2,Demolition and Alteration,NRM2,2
+3,Substructure - Excavation and Earthworks,NRM2,3
+4,Substructure - Concrete Works,NRM2,4
+5,In-situ Concrete Works,NRM2,5
+6,Precast Concrete,NRM2,6
+7,Masonry,NRM2,7
+8,Structural Metalwork,NRM2,8
+9,Carpentry and Joinery,NRM2,9
+10,Cladding and Covering,NRM2,10
+11,Waterproofing,NRM2,11
+12,Roofing,NRM2,12
+13,Doors Windows and Ironmongery,NRM2,13
+14,Plastering and Wall Finishings,NRM2,14
+15,Floor Finishings,NRM2,15
+16,Ceiling Finishings,NRM2,16
+17,Painting and Decorating,NRM2,17
+18,Mechanical Services,NRM2,18
+19,Electrical Services,NRM2,19
+20,Plumbing and Sanitary,NRM2,20
+21,External Works,NRM2,21
+22,Drainage,NRM2,22
+23,Provisional Sums,NRM2,98
+24,Dayworks,NRM2,99
+A,Preliminaries / General Items,SMM7,1
+B,Complete buildings / structures,SMM7,2
+C,Demolitions / Alterations / Renovations,SMM7,3
+D,Groundwork,SMM7,4
+E,In situ concrete / Large precast,SMM7,5
+F,Masonry,SMM7,6
+G,Structural / Carcassing metal / timber,SMM7,7
+H,Cladding / Covering,SMM7,8
+J,Waterproofing,SMM7,9
+K,Linings / Sheathing / Dry partitioning,SMM7,10
+L,Windows / Doors / Stairs,SMM7,11
+M,Surface finishes,SMM7,12
+N,Furniture / Equipment,SMM7,13
+P,Building fabric sundries,SMM7,14
+Q,Paving / Planting / Fencing / Site furniture,SMM7,15
+R,Disposal systems,SMM7,16
+S,Piped supply systems,SMM7,17
+T,Mechanical heating / cooling / refrigeration,SMM7,18
+U,Ventilation / air conditioning,SMM7,19
+V,Electrical supply / power / lighting,SMM7,20
+W,Communications / Security / Control,SMM7,21
+X,Transport,SMM7,22
+Y,Mechanical and electrical services - general,SMM7,23
+1,Preliminaries (Section A),GhIS,1
+2,Site Clearance and Earthworks,GhIS,2
+3,Concrete Works (Sub & Super Structure),GhIS,3
+4,Blockwork and Masonry,GhIS,4
+5,Roofing and Coverings,GhIS,5
+6,Carpentry Joinery and Ironmongery,GhIS,6
+7,Steel and Metal Works,GhIS,7
+8,Finishes - Walls Floors Ceilings,GhIS,8
+9,Painting and Decoration,GhIS,9
+10,Plumbing Sanitary and Drainage,GhIS,10
+11,Electrical Installations,GhIS,11
+12,External Works and Landscaping,GhIS,12
+13,Provisional and Prime Cost Sums,GhIS,98
+14,Dayworks and Contingencies,GhIS,99

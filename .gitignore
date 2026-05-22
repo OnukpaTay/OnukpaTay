@@ -1,0 +1,26 @@
+# R / RStudio
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+
+# OS
+.DS_Store
+Thumbs.db
+
+# App working files
+rsconnect/
+shiny_bookmarks/
+.shinyapps/
+
+# Generated exports
+exports/
+*.xlsx
+*.pdf
+!data/*.xlsx
+!templates_to_integrate/*.xlsx
+
+# Local environment
+.env
+.env.local
