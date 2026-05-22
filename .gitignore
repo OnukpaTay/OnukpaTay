@@ -19,7 +19,12 @@ exports/
 *.xlsx
 *.pdf
 !data/*.xlsx
-!templates_to_integrate/*.xlsx
+
+# Client templates - keep local only, don't push to public repo
+templates_to_integrate/*.xlsx
+templates_to_integrate/*.xls
+templates_to_integrate/*.pdf
+templates_to_integrate/*.docx
 
 # Local environment
 .env

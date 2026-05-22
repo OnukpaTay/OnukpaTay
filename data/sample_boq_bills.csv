@@ -1,0 +1,39 @@
+item_letter,bill_no,bill_name,smm7_section,smm7_subcode,description,unit,quantity,rate
+A,1,Substructure,D,D20,Clear site of existing vegetation including bushes and shrubs,m2,1630,5
+B,1,Substructure,D,D20,Topsoil excavation 150mm thick,m2,1630,5
+C,1,Substructure,D,D20,Pit excavation maximum depth not exceeding 2.00m,m3,325,45
+D,1,Substructure,D,D20,Trench excavation average depth not exceeding 1.50m,m3,90,40
+E,1,Substructure,D,D20,Extra over for excavation in rock,m3,1,150
+F,1,Substructure,D,D20,Disposal of excavated material offsite within 3km,m3,79,100
+G,1,Substructure,D,D20,Backfilling to excavations with materials obtained from excavations,m3,336,35
+H,1,Substructure,D,D20,Hardcore filling average thickness over 0.25m,m3,319,168
+J,1,Substructure,D,D20,Compacting bottoms of excavation,m2,82,5
+K,1,Substructure,D,D20,Compact hardcore filling 300mm layers,m2,377,20
+M,1,Substructure,E,E10,Blinding bed grade C15/20 under bases 50mm thick,m3,9,850
+N,1,Substructure,E,E10,Plain in-situ concrete grade C20/25 in foundations,m3,18,1200
+P,1,Substructure,E,E10,Reinforced concrete C25/30 in ground beams 225x450,m3,12,1250
+Q,1,Substructure,E,E10,Reinforced concrete C25/30 in isolated column bases,m3,38,1250
+R,1,Substructure,E,E10,Reinforced concrete C25/30 in ground floor bed 150mm,m3,56,1250
+S,1,Substructure,E,E10,Reinforced concrete C25/30 in ground floor columns,m3,7,1250
+A,1,Substructure,E,E20,Sawn formwork to edges of bed,m,15,50
+B,1,Substructure,E,E20,Sawn formwork to vertical sides of columns,m2,86,118
+C,1,Substructure,E,E20,Sawn formwork to sides of ground beams,m2,161,118
+F,1,Substructure,E,E30,High tensile steel reinforcement 12mm bar in column bases,ton,1.14,13450
+G,1,Substructure,E,E30,High tensile steel reinforcement 16mm bar in columns,ton,1.56,13450
+H,1,Substructure,E,E30,High tensile steel 10mm stirrups in columns,ton,0.47,13450
+A,2,Ground Floor,E,E10,Reinforced concrete C25/30 in columns,m3,12,1250
+B,2,Ground Floor,E,E10,Reinforced concrete in beams and lintels,m3,12,1250
+C,2,Ground Floor,E,E10,Reinforced concrete in staircase,m3,4,1250
+D,2,Ground Floor,E,E10,Reinforced concrete in suspended slab,m3,50,1250
+F,2,Ground Floor,E,E20,Sawn formwork to vertical sides of columns,m2,180,118
+G,2,Ground Floor,E,E20,Sawn formwork to sides and soffits of beams,m2,24,118
+H,2,Ground Floor,E,E20,Sawn formwork to soffits of suspended slab,m2,331,118
+W,2,Ground Floor,F,F10,225mm hollow sandcrete blockwork external walls,m2,420,180
+X,2,Ground Floor,F,F10,150mm hollow sandcrete blockwork internal walls,m2,310,140
+A,5,Plumbing First Fix,R,R11,4 inch uPVC waste pipe,m,25,952
+B,5,Plumbing First Fix,R,R11,4 inch elbow,nr,28,44
+C,5,Plumbing First Fix,R,R11,4 inch swerve tee,nr,20,69
+D,5,Plumbing First Fix,R,R11,2 inch uPVC waste pipe,m,19,475
+A,6,Electrical First Fix,V,,13A switched socket outlet on PVC trunking,nr,48,180
+B,6,Electrical First Fix,V,,LED panel light 600x600mm,nr,32,420
+C,6,Electrical First Fix,V,,Distribution board 12-way single phase,nr,1,4500

@@ -33,6 +33,11 @@ DEFAULT_SETTINGS <- list(
   practice_addr   = "Accra, Ghana",
   qs_name         = "Sedem Onukpa-Tay",
   qs_credentials  = "BSc QS, GhIS, MRICS (Probationer)",
+  architect_name  = "",
+  architect_addr  = "",
+  approver_name   = "",
+  approver_title  = "",
+  accountant_name = "",
   currency_code   = "GHS",
   currency_symbol = "GH₵",
   measurement_std = "NRM2",       # NRM2 | SMM7 | GhIS
@@ -41,8 +46,11 @@ DEFAULT_SETTINGS <- list(
   retention_cap   = 5,            # % of contract sum
   vat_pct         = 12.5,         # Ghana VAT default
   nhil_getfl_pct  = 6,            # NHIL + GETFund + Covid (typical Ghana levies)
+  withholding_tax_pct = 5,        # WHT on construction contracts
   overhead_pct    = 12,
-  profit_pct      = 8
+  profit_pct      = 8,
+  prelims_pct     = 7,            # Prelims as % of measured works
+  contingency_pct = 5             # Contingency as % of measured + prelims
 )
 
 # Lookup tables (loaded from /data) ------------------------------------------
@@ -56,6 +64,7 @@ UNITS_DF         <- load_csv("data/units.csv")
 TRADE_GROUPS_DF  <- load_csv("data/trade_groups.csv")
 SAMPLE_RATES_DF  <- load_csv("data/sample_rates.csv")
 SAMPLE_BOQ_DF    <- load_csv("data/sample_boq.csv")
+SAMPLE_BILLS_DF  <- load_csv("data/sample_boq_bills.csv")
 ELEMENTS_DF      <- load_csv("data/elements_nrm1.csv")
 
 # ---- Helpers ---------------------------------------------------------------

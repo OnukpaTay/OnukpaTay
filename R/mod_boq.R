@@ -217,7 +217,12 @@ mod_boq_server <- function(id, settings, app_state) {
                 format(Sys.Date(), "%Y%m%d")),
       content = function(file) {
         df <- boq() %>% boq_compute_amount()
-        write_boq_xlsx(df, settings, input$project_name, file)
+        write_boq_xlsx(df, settings, input$project_name, file,
+                       client = input$employer,
+                       location = input$location,
+                       date = input$date,
+                       prelims_pct = settings$prelims_pct,
+                       contingency_pct = settings$contingency_pct)
       }
     )
 

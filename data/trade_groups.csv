@@ -24,28 +24,46 @@ code,trade,standard,order
 23,Provisional Sums,NRM2,98
 24,Dayworks,NRM2,99
 A,Preliminaries / General Items,SMM7,1
-B,Complete buildings / structures,SMM7,2
 C,Demolitions / Alterations / Renovations,SMM7,3
-D,Groundwork,SMM7,4
-E,In situ concrete / Large precast,SMM7,5
-F,Masonry,SMM7,6
-G,Structural / Carcassing metal / timber,SMM7,7
-H,Cladding / Covering,SMM7,8
-J,Waterproofing,SMM7,9
-K,Linings / Sheathing / Dry partitioning,SMM7,10
-L,Windows / Doors / Stairs,SMM7,11
-M,Surface finishes,SMM7,12
-N,Furniture / Equipment,SMM7,13
-P,Building fabric sundries,SMM7,14
-Q,Paving / Planting / Fencing / Site furniture,SMM7,15
-R,Disposal systems,SMM7,16
-S,Piped supply systems,SMM7,17
-T,Mechanical heating / cooling / refrigeration,SMM7,18
-U,Ventilation / air conditioning,SMM7,19
-V,Electrical supply / power / lighting,SMM7,20
-W,Communications / Security / Control,SMM7,21
-X,Transport,SMM7,22
-Y,Mechanical and electrical services - general,SMM7,23
+D,D. Groundwork,SMM7,4
+D20,D20 Excavating and filling,SMM7,4
+E,E. In situ concrete / Large precast concrete,SMM7,5
+E10,E10 Mixing / casting / curing in situ concrete,SMM7,5
+E20,E20 Wrot formwork to in situ concrete,SMM7,5
+E30,E30 Reinforcement for in situ concrete,SMM7,5
+F,F. Masonry,SMM7,6
+F10,F10 Brick / block walling,SMM7,6
+F30,F30 Accessories / sundries for brick / block walling,SMM7,6
+G,G. Structural / Carcassing metal / timber,SMM7,7
+G10,G10 Structural steel framing,SMM7,7
+G20,G20 Carpentry / timber framing,SMM7,7
+H,H. Cladding / Covering,SMM7,8
+H30,H30 Fibre cement profiled sheet cladding,SMM7,8
+H60,H60 Plain roof tiling,SMM7,8
+J,J. Waterproofing,SMM7,9
+K,K. Linings / Sheathing / Dry partitioning,SMM7,10
+L,L. Windows / Doors / Stairs,SMM7,11
+L10,L10 Windows / rooflights / screens / louvres,SMM7,11
+L20,L20 Doors / shutters / hatches,SMM7,11
+L30,L30 Stairs / walkways / balustrades,SMM7,11
+M,M. Surface finishes,SMM7,12
+M10,M10 Sand cement / concrete / granolithic screeds,SMM7,12
+M20,M20 Plastered / rendered / roughcast coatings,SMM7,12
+M40,M40 Stone / concrete / quarry / ceramic tiling,SMM7,12
+M60,M60 Painting / clear finishing,SMM7,12
+N,N. Furniture / Equipment,SMM7,13
+P,P. Building fabric sundries,SMM7,14
+Q,Q. Paving / Planting / Fencing / Site furniture,SMM7,15
+R,R. Disposal systems,SMM7,16
+R11,R11 Above ground foul drainage,SMM7,16
+R12,R12 Below ground drainage,SMM7,16
+S,S. Piped supply systems,SMM7,17
+T,T. Mechanical heating / cooling / refrigeration,SMM7,18
+U,U. Ventilation / air conditioning,SMM7,19
+V,V. Electrical supply / power / lighting,SMM7,20
+W,W. Communications / Security / Control,SMM7,21
+X,X. Transport,SMM7,22
+Y,Y. Mechanical and electrical services - general,SMM7,23
 1,Preliminaries (Section A),GhIS,1
 2,Site Clearance and Earthworks,GhIS,2
 3,Concrete Works (Sub & Super Structure),GhIS,3
