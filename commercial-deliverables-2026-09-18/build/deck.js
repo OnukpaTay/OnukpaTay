@@ -13,6 +13,10 @@ const CONTENT_BOTTOM = 6.58;
 const sh = (o) => Object.assign({ type:'outer', color:'1B2A41', blur:12, offset:2, angle:90, opacity:0.10 }, o||{});
 const T  = (o) => Object.assign({ isTextBox:true, margin:0, fontFace:BF, color:INK2 }, o);
 
+// The Commercial Manager removed the closing 'Next Steps' slide from the reviewed copy.
+// Set this to true to bring it back (its content is refreshed for the new figures).
+const INCLUDE_NEXT_STEPS = false;
+
 const pres = new pptxgen();
 pres.layout = 'LAYOUT_WIDE';
 pres.author = 'Commercial Department';
@@ -93,7 +97,7 @@ function chip(s, x, y, w, h, text, bg, fg){
   chip(s, M, 4.52, 2.25, 0.42, '18 SEPTEMBER 2026', AMBER, '1B2A41');
 
   // headline mini-stats
-  const stats = [['22','Deliverables tracked'],['13','Active projects'],['77%','Delivered to date'],['5','Still outstanding']];
+  const stats = [['22','Deliverables tracked'],['13','Active projects'],['82%','Delivered to date'],['4','Still outstanding']];
   const bw = 2.72, gap = 0.30;
   stats.forEach((st, i) => {
     const x = M + i * (bw + gap);
@@ -104,7 +108,7 @@ function chip(s, x, y, w, h, text, bg, fg){
   });
 
   s.addText('Presented by the Commercial Manager', T({ x:M, y:6.88, w:7.5, h:0.30, fontSize:10.5, color:ICE, valign:'middle' }));
-  s.addNotes('Good morning. This is the commercial department status report as at 18 September 2026, covering pre and post contract deliverables across 13 active projects. Twenty-two deliverables are being tracked. Seventeen are complete. Five remain outstanding, and three of those need a decision from this meeting.');
+  s.addNotes('Good morning. This is the commercial department status report as at 18 September 2026, covering pre and post contract deliverables across 13 active projects. Twenty-two deliverables are being tracked. Eighteen are complete. Four remain outstanding, and three items on this register need a decision from this meeting.');
 }
 
 /* ================= SLIDE 2 — EXECUTIVE SUMMARY ================= */
@@ -115,8 +119,8 @@ function chip(s, x, y, w, h, text, bg, fg){
 
   const tiles = [
     ['22', 'Deliverables tracked', 'Across 13 active projects', NAVY],
-    ['17', 'Delivered', '77% of the register', GOOD],
-    ['5',  'Outstanding', '4 in progress, 1 not started', WARN],
+    ['18', 'Delivered', '82% of the register', GOOD],
+    ['4',  'Outstanding', '3 in progress, 1 not started', WARN],
     ['3',  'Need a decision today', 'Blocked or at risk of slipping', CRIT]
   ];
   const tw = (CW - 3 * 0.28) / 4, th = 1.52;
@@ -130,8 +134,8 @@ function chip(s, x, y, w, h, text, bg, fg){
   });
 
   const rows = [
-    [BLUE, 'The register is 84% complete against a 93% plan',
-     'A shortfall of 9 percentage points, equivalent to two full deliverables. All of it sits in three items: Kinbu, Stanbic and Ecole.'],
+    [BLUE, 'The register is 86% complete against a 93% plan',
+     'A shortfall of 6.8 percentage points, equal to one and a half deliverables. All of it sits in three items: Kinbu, Stanbic and the Priority Insurance BoQ.'],
     [CRIT, 'Two tender submissions fall due on 24 September',
      'The Kinbu School Canteen priced BoQ stands at 10% against a 100% plan, and the Stanbic Bank preliminary estimate at 50%. Both are held by the wider team rather than a named owner.'],
     [WARN, 'Priority Insurance is held up by missing design information',
@@ -147,7 +151,7 @@ function chip(s, x, y, w, h, text, bg, fg){
   });
 
   footer(s, 2);
-  s.addNotes('Three things to take away. First, we are 84% complete against a 93% plan — a nine point gap, and it is concentrated, not spread. Second, two tenders close on 24 September and one of them, Kinbu, is only 10% priced. Third, Priority Insurance is blocked on information we do not control. Slides four to eight take each of these in turn.');
+  s.addNotes('Three things to take away. First, we are 86% complete against a 93% plan — a gap of just under seven points, and it is concentrated, not spread. Ecole closed out since the last review. Second, two tenders close on 24 September and one of them, Kinbu, is only 10% priced. Third, Priority Insurance is blocked on information we do not control.');
 }
 
 /* ================= SLIDE 3 — DELIVERY STATUS ================= */
@@ -156,7 +160,7 @@ function chip(s, x, y, w, h, text, bg, fg){
   const y0 = header(s, 'PORTFOLIO HEALTH', 'Where the 22 Deliverables Stand');
 
   s.addChart(pres.ChartType.doughnut,
-    [{ name:'Delivery status', labels:['Delivered','In progress','Not started'], values:[17, 4, 1] }],
+    [{ name:'Delivery status', labels:['Delivered','In progress','Not started'], values:[18, 3, 1] }],
     { x:M, y:y0+0.10, w:5.30, h:4.50, holeSize:62, showTitle:false, showLegend:false, showValue:false,
       chartColors:[GOOD, WARN, MUTED], dataBorder:{ pct:2, color:WHITE } });
 
@@ -166,8 +170,8 @@ function chip(s, x, y, w, h, text, bg, fg){
 
   const rx = 6.30, rw = W - M - rx;   // 6.413
   const legend = [
-    [GOOD,  'Delivered',   'Signed off and issued',            17, '77%'],
-    [WARN,  'In progress', 'Started but short of the plan',      4, '18%'],
+    [GOOD,  'Delivered',   'Signed off and issued',            18, '82%'],
+    [WARN,  'In progress', 'Started but short of the plan',      3, '14%'],
     [MUTED, 'Not started', 'Zero progress, still within plan',   1,  '5%']
   ];
   const lh = 0.80, lg = 0.13;
@@ -185,30 +189,29 @@ function chip(s, x, y, w, h, text, bg, fg){
   const py = y0 + 0.16 + 3 * (lh + lg) + 0.22;
   card(s, rx, py, rw, 1.66);
   s.addText('Progress against plan', T({ x:rx+0.22, y:py+0.16, w:rw-0.44, h:0.28, fontSize:12.5, bold:true, color:NAVY, valign:'middle' }));
-  const bars = [['Planned', 0.932, '93.2%', ORANGE], ['Actual', 0.841, '84.1%', BLUE]];
+  const bars = [['Planned', 0.932, '93.2%', ORANGE], ['Actual', 0.864, '86.4%', BLUE]];
   bars.forEach((b, i) => {
     const by = py + 0.56 + i * 0.40;
     s.addText(b[0], T({ x:rx+0.22, y:by-0.04, w:1.05, h:0.26, fontSize:10.5, color:INK2, valign:'middle' }));
     progress(s, rx+1.34, by, 3.10, b[1], null, b[3], 0.17);
     s.addText(b[2], T({ x:rx+4.56, y:by-0.05, w:1.60, h:0.28, fontSize:11.5, bold:true, color:NAVY, valign:'middle' }));
   });
-  s.addText('9.1 points behind plan — a shortfall of two deliverables',
+  s.addText('6.8 points behind plan — a shortfall of 1.5 deliverables',
     T({ x:rx+0.22, y:py+1.32, w:rw-0.44, h:0.26, fontSize:10.5, bold:true, color:CRIT, valign:'middle' }));
 
   footer(s, 3);
-  s.addNotes('Seventeen of twenty-two deliverables are complete — just over three quarters of the register. Four are in progress and one has not started, though that one is still inside its plan. Measured on progress rather than headcount, we are at 84.1% against a planned 93.2% — a gap of about two deliverables.');
+  s.addNotes('Eighteen of twenty-two deliverables are complete — over four fifths of the register. Three are in progress and one has not started, though that one is still inside its plan. Measured on progress rather than headcount, we are at 86.4% against a planned 93.2% — a gap of one and a half deliverables.');
 }
 
 /* ================= SLIDE 4 — BY PROJECT ================= */
 {
   const s = pres.addSlide();
   const y0 = header(s, 'DELIVERY PERFORMANCE', 'Where the Portfolio Is Behind',
-    'The four projects carrying variance. Planned versus actual completion, averaged across each project\u2019s deliverables.');
+    'The three projects still carrying variance. Planned versus actual completion, averaged across each project\u2019s deliverables.');
 
   // ordered worst-variance first; data[0] plots at the BOTTOM of a horizontal bar chart
   const proj = [
     ['Priority Insurance',     25,  20],
-    ["Ecole Int'l School",    100,  50],
     ['Stanbic Bank',          100,  50],
     ['Kinbu Canteen Tender',  100,  10]
   ];
@@ -236,8 +239,8 @@ function chip(s, x, y, w, h, text, bg, fg){
 
   const rx = M + cw2 + 0.32, rw = W - M - rx;
   const panels = [
-    [GOOD, '9', 'projects fully delivered', 'Seventeen deliverables closed, every one of them at 100% of plan. The detail follows on the next slide.'],
-    [CRIT, '4', 'projects behind plan',     'Between them they account for the entire shortfall of two deliverables against the September plan.']
+    [GOOD, '10', 'projects fully delivered', 'Eighteen deliverables closed, every one of them at 100% of plan. The detail follows on the next slide.'],
+    [CRIT, '3',  'projects behind plan',     'Between them they account for the whole shortfall of one and a half deliverables against the September plan.']
   ];
   panels.forEach((p, i) => {
     const y = y0 + i * 2.28;
@@ -249,61 +252,63 @@ function chip(s, x, y, w, h, text, bg, fg){
   });
 
   footer(s, 4);
-  s.addNotes('This is where the variance actually sits. Kinbu is the outlier — 10% against a 100% plan. Stanbic and Ecole are both at half of what was planned. Priority Insurance looks small at 20 against 25, and it is small, because only half of its BoQ was ever scheduled to be done by today. Every other project in the portfolio, nine of them, is complete.');
+  s.addNotes('This is where the variance actually sits, and it is now three projects rather than four. Kinbu is the outlier at 10% against a 100% plan. Stanbic is at half of what was planned. Priority Insurance looks small at 20 against 25, and it is small, because only half of its BoQ was ever scheduled to be done by today. Every other project in the portfolio, ten of them, is complete.');
 }
 
 /* ================= SLIDE 5 — DELIVERED ================= */
 {
   const s = pres.addSlide();
-  const y0 = header(s, 'COMPLETED WORK', '17 Deliverables Signed Off Across 9 Projects');
+  const y0 = header(s, 'COMPLETED WORK', '18 Deliverables Signed Off Across 10 Projects');
 
   const done = [
     ['Anglogold Ashanti', 3, ['Budget', 'Revised BoQ', 'Valuation report'], 'Gilbert, Sedem'],
-    ['Warehouse', 3, ['Cost analysis — electrical works', 'Cashflow forecast', 'Subcontractor selection — roller shutter'], 'Eunice'],
+    ['Warehouse', 3, ['Cost analysis — electrical works', 'Cashflow forecast', 'Roller shutter subcontractor'], 'Eunice'],
     ['RE Villa', 3, ['Budgetary report', 'Remeasurement of hardcore filling', 'Cashflow forecast'], 'Eunice'],
     ['Vanguard Assurance Spintex', 2, ['Monthly valuation', 'Budgetary report'], 'Gilbert'],
     ['Advans Savings & Loans', 2, ['Final account', 'Budgetary report'], 'Tracy'],
+    ['Ecole International School', 1, ['BoQ and Budget'], 'Tracy, Obed, Eunice'],
     ['Thoroughbred Place', 1, ['Financial report (internal)'], 'Sedem'],
     ['Barry Callebaut', 1, ['Budgetary report'], 'Gilbert'],
     ['Brimmo Gardens Tender', 1, ['RFP submission'], 'Eunice'],
     ["Enterprise COO's Office", 1, ['Cashflow forecast'], 'Eunice']
   ];
 
-  const cw = (CW - 2 * 0.28) / 3, chh = (CONTENT_BOTTOM - y0 - 2 * 0.20) / 3;
+  const COLS = 4, GX = 0.24, GY = 0.20;
+  const cw = (CW - (COLS - 1) * GX) / COLS;
+  const chh = (CONTENT_BOTTOM - y0 - 2 * GY) / 3;
   done.forEach((d, i) => {
-    const x = M + (i % 3) * (cw + 0.28);
-    const y = y0 + Math.floor(i / 3) * (chh + 0.20);
+    const x = M + (i % COLS) * (cw + GX);
+    const y = y0 + Math.floor(i / COLS) * (chh + GY);
     card(s, x, y, cw, chh);
-    dot(s, x + cw - 0.40, y + 0.38, 0.44, GOOD, String(d[1]));
-    s.addText(d[0], T({ x:x+0.24, y:y+0.16, w:cw-0.82, h:0.44, fontSize:13, bold:true, fontFace:HF, color:NAVY, valign:'middle' }));
+    dot(s, x + cw - 0.36, y + 0.34, 0.40, GOOD, String(d[1]));
+    s.addText(d[0], T({ x:x+0.22, y:y+0.15, w:cw-0.76, h:0.46, fontSize:11.5, bold:true, fontFace:HF, color:NAVY, valign:'top' }));
     s.addText(d[2].map((t, j) => ({ text:t, options:{ bullet:{ indent:13 }, breakLine: j < d[2].length - 1 } })),
-      T({ x:x+0.32, y:y+0.64, w:cw-0.58, h:chh-1.00, fontSize:9, color:INK2, paraSpaceAfter:3, valign:'top' }));
-    s.addText(d[3], T({ x:x+0.24, y:y+chh-0.36, w:cw-0.48, h:0.26, fontSize:9, bold:true, color:MUTED, valign:'middle' }));
+      T({ x:x+0.30, y:y+0.64, w:cw-0.56, h:chh-1.06, fontSize:8.5, color:INK2, paraSpaceAfter:2, valign:'top' }));
+    s.addText(d[3], T({ x:x+0.22, y:y+chh-0.34, w:cw-0.44, h:0.26, fontSize:8.5, bold:true, color:MUTED, valign:'middle' }));
   });
 
   footer(s, 5);
-  s.addNotes('This is the delivered column. Nine projects are fully closed out for the period — seventeen deliverables in total. Anglogold, the Warehouse and RE Villa each carried three. Worth noting that the Anglogold budget is finished but is sitting with a reviewer; I will come back to that on the blockers slide.');
+  s.addNotes('This is the delivered column, and Ecole has now joined it. Ten projects are fully closed out for the period — eighteen deliverables in total. Anglogold, the Warehouse and RE Villa each carried three. Worth noting that the Anglogold budget is finished but is sitting with a reviewer; I will come back to that on the blockers slide.');
 }
 
 /* ================= SLIDE 6 — OUTSTANDING ================= */
 {
   const s = pres.addSlide();
-  const y0 = header(s, 'THE WATCH LIST', '5 Outstanding Deliverables',
+  const y0 = header(s, 'THE WATCH LIST', '4 Outstanding Deliverables',
     'Ordered by exposure. The dark marker on each bar shows where the deliverable was planned to be today.');
 
   const out = [
     ['Kinbu School Canteen Tender', 'Priced BoQ',           0.10, 1.00, '24 Sep 2026', 'Team',                 CRIT, 'CRITICAL'],
     ['Stanbic Bank',                'Preliminary Estimate', 0.50, 1.00, '24 Sep 2026', 'Team',              SERIOUS, 'AT RISK'],
-    ["Ecole International School",  'BoQ and Budget',       0.50, 1.00, '18 Sep 2026', 'Tracy, Obed, Eunice',  CRIT, 'DUE TODAY'],
     ['Priority Insurance',          'Complete BoQ',         0.40, 0.50, '30 Sep 2026', 'Obed, Sedem, Gilbert', WARN, 'BLOCKED'],
     ['Priority Insurance',          'Complete Budget',      0.00, 0.00, '09 Oct 2026', 'Obed, Sedem, Gilbert', MUTED,'ON PLAN']
   ];
 
-  const rh = (CONTENT_BOTTOM - y0 - 4 * 0.13) / 5;
+  const rh = 1.02, rg = (CONTENT_BOTTOM - y0 - out.length * rh) / (out.length - 1), o0 = (rh - 0.54) / 2 - 0.12;
   out.forEach((o, i) => {
-    const y = y0 + i * (rh + 0.13);
-    card(s, M, y, CW, rh);
-    dot(s, M + 0.30, y + rh/2, 0.24, o[6]);
+    const y = y0 + i * (rh + rg) + o0;
+    card(s, M, y - o0, CW, rh);
+    dot(s, M + 0.30, y - o0 + rh/2, 0.24, o[6]);
     s.addText(o[0], T({ x:M+0.58, y:y+0.13, w:2.80, h:0.26, fontSize:11.5, bold:true, color:NAVY, valign:'middle' }));
     s.addText(o[1], T({ x:M+0.58, y:y+0.40, w:2.80, h:0.26, fontSize:10,   color:INK2, valign:'middle' }));
 
@@ -317,22 +322,22 @@ function chip(s, x, y, w, h, text, bg, fg){
     s.addText('OWNER', T({ x:M+8.42, y:y+0.15, w:1.85, h:0.22, fontSize:8, bold:true, color:MUTED, charSpacing:1.1, valign:'middle' }));
     s.addText(o[5],    T({ x:M+8.42, y:y+0.38, w:1.85, h:0.28, fontSize:10, color:INK2, valign:'middle' }));
 
-    chip(s, M + 10.52, y + (rh - 0.34)/2, 1.28, 0.34, o[7], o[6], (o[6] === WARN || o[6] === SERIOUS) ? '1B2A41' : WHITE);
+    chip(s, M + 10.52, y - o0 + (rh - 0.34)/2, 1.28, 0.34, o[7], o[6], (o[6] === WARN || o[6] === SERIOUS) ? '1B2A41' : WHITE);
   });
 
   footer(s, 6);
-  s.addNotes('Five items. Kinbu is the one that should worry us — 10% priced with six days to submission. Stanbic is at half. Ecole was due today and is at half. Priority Insurance BoQ is only ten points behind plan, but it is blocked rather than late. The Priority budget has not started and does not need to have — it follows the BoQ.');
+  s.addNotes('Four items now that Ecole has closed. Kinbu is the one that should worry us — 10% priced with six days to submission. Stanbic is at half. The Priority Insurance BoQ is only ten points behind plan, but it is blocked rather than late. The Priority budget has not started and does not need to have — it follows the BoQ.');
 }
 
 /* ================= SLIDE 7 — DEADLINE RUNWAY ================= */
 {
   const s = pres.addSlide();
   const y0 = header(s, 'WHAT FALLS DUE NEXT', 'The Next Three Weeks',
-    'Every outstanding deliverable lands between today and 9 October.');
+    'With Ecole closed, the remaining work falls due between 24 September and 9 October.');
 
   const x0 = 1.95, x1 = 11.30, span = x1 - x0, lineY = 3.86;
   const ms = [
-    { d:0,  date:'18 Sep',  when:'Today',     color:CRIT,  items:[["Ecole Int'l School", 'BoQ and Budget', '50% complete']] },
+    { d:0,  date:'18 Sep',  when:'Today',     color:MUTED, items:[] },
     { d:6,  date:'24 Sep',  when:'In 6 days', color:CRIT,  items:[['Kinbu Canteen Tender','Priced BoQ','10% complete'], ['Stanbic Bank','Preliminary Estimate','50% complete']] },
     { d:12, date:'30 Sep',  when:'In 12 days',color:WARN,  items:[['Priority Insurance','Complete BoQ','40% complete']] },
     { d:21, date:'09 Oct',  when:'In 21 days',color:MUTED, items:[['Priority Insurance','Complete Budget','Not started']] }
@@ -347,26 +352,27 @@ function chip(s, x, y, w, h, text, bg, fg){
     const cw = 2.32, cx = px - cw/2;
     const chh = 0.34 + m.items.length * 0.66;
     const cy = BASE - chh;
-    card(s, cx, cy, cw, chh);
+    if (m.items.length) card(s, cx, cy, cw, chh);
     m.items.forEach((it, j) => {
       const iy = cy + 0.16 + j * 0.66;
       s.addText(it[0], T({ x:cx+0.20, y:iy,      w:cw-0.40, h:0.24, fontSize:10.5, bold:true, color:NAVY, valign:'middle' }));
       s.addText(it[1], T({ x:cx+0.20, y:iy+0.23, w:cw-0.40, h:0.22, fontSize:9.5,  color:INK2, valign:'middle' }));
       s.addText(it[2], T({ x:cx+0.20, y:iy+0.44, w:cw-0.40, h:0.20, fontSize:8.5, bold:true, color:m.color, valign:'middle' }));
     });
-    s.addShape(pres.ShapeType.rect,    { x:px-0.015, y:BASE, w:0.03, h:lineY-0.15-BASE, fill:{color:LINE}, line:{type:'none'} });
-    s.addShape(pres.ShapeType.ellipse, { x:px-0.15, y:lineY-0.15, w:0.30, h:0.30, fill:{color:m.color}, line:{color:WHITE, width:2.5} });
-    s.addText(m.date, T({ x:px-1.20, y:lineY+0.26, w:2.40, h:0.32, fontSize:15, bold:true, fontFace:HF, color:NAVY, align:'center', valign:'middle' }));
+    if (m.items.length) s.addShape(pres.ShapeType.rect, { x:px-0.015, y:BASE, w:0.03, h:lineY-0.15-BASE, fill:{color:LINE}, line:{type:'none'} });
+    const md = m.items.length ? 0.30 : 0.20;
+    s.addShape(pres.ShapeType.ellipse, { x:px-md/2, y:lineY-md/2, w:md, h:md, fill:{color:m.color}, line:{color:WHITE, width:2.5} });
+    s.addText(m.date, T({ x:px-1.20, y:lineY+0.26, w:2.40, h:0.32, fontSize:15, bold:true, fontFace:HF, color: m.items.length ? NAVY : MUTED, align:'center', valign:'middle' }));
     s.addText(m.when, T({ x:px-1.20, y:lineY+0.58, w:2.40, h:0.26, fontSize:10, color:MUTED, align:'center', valign:'middle' }));
   });
 
   card(s, M, 5.08, CW, 1.18, { fill: PANEL, lineWidth: 0, flat: true });
   s.addText('Pinch point', T({ x:M+0.30, y:5.24, w:2.0, h:0.26, fontSize:11, bold:true, color:CRIT, valign:'middle' }));
-  s.addText('Two tender submissions close on the same day, 24 September, and both sit with the team rather than a named owner. Between them they account for 1.4 of the 2.0 deliverables we are behind. Naming an owner for each is the single highest-value action available this week.',
+  s.addText('Two tender submissions close on the same day, 24 September, and both sit with the team rather than a named owner. Between them they account for 1.4 of the 1.5 deliverables we are behind. Naming an owner for each is the single highest-value action available this week.',
     T({ x:M+0.30, y:5.52, w:CW-0.60, h:0.60, fontSize:10.5, color:INK2, valign:'top' }));
 
   footer(s, 7);
-  s.addNotes('Laid out on a calendar, the exposure is obvious. Today Ecole is due. Six days from now two tenders close on the same day. The Priority BoQ follows on the thirtieth and its budget on the ninth of October. The twenty-fourth is the pinch point, and neither of those two tenders has a named owner.');
+  s.addNotes('Laid out on a calendar, the exposure is obvious. Nothing falls due today now that Ecole has closed. Six days from now two tenders close on the same day. The Priority BoQ follows on the thirtieth and its budget on the ninth of October. The twenty-fourth is the pinch point, and neither of those two tenders has a named owner.');
 }
 
 /* ================= SLIDE 8 — BLOCKERS ================= */
@@ -417,7 +423,7 @@ function chip(s, x, y, w, h, text, bg, fg){
   const y0 = header(s, 'RESOURCING', 'Workload Across the Team',
     'Deliverables held by each team member, split between delivered and outstanding.');
 
-  const people = [['Team', 0, 2], ['Obed', 0, 3], ['Tracy', 2, 1], ['Sedem', 3, 2], ['Gilbert', 4, 2], ['Eunice', 8, 1]];
+  const people = [['Team', 0, 2], ['Obed', 1, 2], ['Tracy', 3, 0], ['Sedem', 3, 2], ['Gilbert', 4, 2], ['Eunice', 9, 0]];
   s.addChart(pres.ChartType.bar, [
     { name:'Delivered',   labels: people.map(p=>p[0]), values: people.map(p=>p[1]) },
     { name:'Outstanding', labels: people.map(p=>p[0]), values: people.map(p=>p[2]) }
@@ -437,8 +443,8 @@ function chip(s, x, y, w, h, text, bg, fg){
 
   const nx = M + 8.25, nw = W - M - nx;
   const notes = [
-    ['Eunice carries the largest load', 'Nine deliverables, eight of them already closed. The highest throughput in the department.'],
-    ['Obed has no closed deliverables', 'All three of his items are shared and still open — Priority Insurance and Ecole. Worth checking whether he is blocked rather than behind.'],
+    ['Eunice has closed every item', 'Nine deliverables, all of them delivered. The highest throughput in the department by some margin.'],
+    ['Obed\u2019s open work is one project', 'Both of his remaining items sit on Priority Insurance, which is blocked on design information rather than running late.'],
     ['Two items have no named owner', 'Both Kinbu and Stanbic are logged against "Team". These are the two tenders closing on 24 September.']
   ];
   const nh = 1.28;
@@ -453,9 +459,10 @@ function chip(s, x, y, w, h, text, bg, fg){
     T({ x:M, y:y0+4.45, w:CW, h:0.34, fontSize:9.5, color:MUTED, valign:'top' }));
 
   footer(s, 9);
-  s.addNotes('On resourcing: Eunice is carrying nine deliverables and has closed eight. Gilbert six, Sedem five. Obed shows three open and none closed, but all three are shared items on blocked projects, so that is a blockage rather than a performance question. The two unowned items are the same two tenders we keep coming back to.');
+  s.addNotes('On resourcing: Eunice is carrying nine deliverables and has now closed all nine. Gilbert six, Sedem five. Tracy is also fully closed out. Obed has two items left, both on Priority Insurance, so that is a blockage rather than a performance question. The two unowned items are the same two tenders we keep coming back to.');
 }
 
+if (INCLUDE_NEXT_STEPS)
 /* ================= SLIDE 10 — NEXT STEPS ================= */
 {
   const s = pres.addSlide();
@@ -464,13 +471,13 @@ function chip(s, x, y, w, h, text, bg, fg){
   s.addShape(pres.ShapeType.ellipse, { x:-1.70, y:6.15, w:3.0, h:3.0, fill:{color:AMBER, transparency:92}, line:{type:'none'} });
 
   s.addText('NEXT STEPS', T({ x:M, y:0.62, w:CW, h:0.26, fontSize:10.5, bold:true, color:AMBER, charSpacing:1.6, valign:'middle' }));
-  s.addText('Closing the Nine-Point Gap', T({ x:M, y:0.90, w:CW, h:0.62, fontSize:33, bold:true, fontFace:HF, color:WHITE, valign:'middle' }));
+  s.addText('Closing the Seven-Point Gap', T({ x:M, y:0.90, w:CW, h:0.62, fontSize:33, bold:true, fontFace:HF, color:WHITE, valign:'middle' }));
 
   const acts = [
     ['Name a lead for each open tender', 'Kinbu priced BoQ and Stanbic preliminary estimate', 'Commercial Manager', 'Today'],
-    ['Close out the Ecole BoQ and budget', 'Now at 50% and past its due date', 'Tracy, Obed, Eunice', '22 Sep'],
     ['Obtain the Priority Insurance drawings', 'Floor finishes schedule and structural drawings', 'Design team / client', '23 Sep'],
-    ['Clear the Anglogold budget review', 'Complete since 11 September, awaiting a reviewer', 'Nominated reviewer', '22 Sep']
+    ['Clear the Anglogold budget review', 'Complete since 11 September, awaiting a reviewer', 'Nominated reviewer', '22 Sep'],
+    ['Start the Priority Insurance budget', 'Follows the BoQ, cannot begin until the drawings arrive', 'Obed, Sedem, Gilbert', '09 Oct']
   ];
   const ah = 0.94, ag = 0.17, ay0 = 1.82;
   acts.forEach((a, i) => {
@@ -486,12 +493,12 @@ function chip(s, x, y, w, h, text, bg, fg){
     s.addText(a[3], T({ x:M+10.05, y:y+0.42, w:1.8, h:0.30, fontSize:12, bold:true, color:WHITE, valign:'middle' }));
   });
 
-  s.addText('Clearing items 1 and 2 alone returns the register to plan.',
+  s.addText('Naming the two tender leads alone closes 1.4 of the remaining 1.5-deliverable gap.',
     T({ x:M, y:6.32, w:8.2, h:0.32, fontSize:13, bold:true, fontFace:HF, color:AMBER, valign:'middle' }));
   s.addText('Source: Commercial Department deliverables register (22 rows), 18 September 2026. Dates read as day/month/year. Deliverable names lightly corrected for spelling.',
     T({ x:M, y:6.92, w:CW, h:0.28, fontSize:8.5, color:'7E8FA6', valign:'middle' }));
 
-  s.addNotes('To close: four actions. Name the two tender leads today. Finish Ecole by the twenty-second. Chase the Priority Insurance drawings by the twenty-third. Clear the Anglogold review by the twenty-second. Items one and two on their own take us back to plan. I need decisions on the tender ownership and the drawings before we leave this room.');
+  s.addNotes('To close: four actions. Name the two tender leads today. Chase the Priority Insurance drawings by the twenty-third. Clear the Anglogold review by the twenty-second. The Priority budget then follows by the ninth of October. Naming the tender leads on its own recovers almost the whole remaining gap. I need decisions on the tender ownership and the drawings before we leave this room.');
 }
 
 pres.writeFile({ fileName: 'Commercial_Department_Deliverables_Sep2026.pptx' })
