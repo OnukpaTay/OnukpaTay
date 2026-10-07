@@ -1,346 +1,364 @@
+"""Build the Priority Insurance cash flow on the Thoroughbred Place workbook template."""
 import sys, copy, datetime
 import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter as CL
-from openpyxl.workbook.defined_name import DefinedName
-from openpyxl.formatting.rule import FormulaRule
-from openpyxl.chart import BarChart, LineChart, Reference
+from openpyxl.formatting.rule import ColorScaleRule
 
-src, out = sys.argv[1], sys.argv[2]
-swb = openpyxl.load_workbook(src)
-sws = swb['OPTION 1rev']
+ref_path, out = sys.argv[1], sys.argv[2]
+wb = openpyxl.load_workbook(ref_path, keep_links=False)
 
-wb = openpyxl.Workbook()
-BOLD = Font(bold=True); HDR = Font(bold=True, color='FFFFFF')
-HFILL = PatternFill('solid', fgColor='1F3864'); INFILL = PatternFill('solid', fgColor='FFF2CC')
-SUBFILL = PatternFill('solid', fgColor='D9E1F2'); TOTFILL = PatternFill('solid', fgColor='E2EFDA')
-thin = Side(style='thin', color='999999'); BOX = Border(left=thin, right=thin, top=thin, bottom=thin)
-MONEY = '#,##0.00;[Red](#,##0.00);"-"'
-CTR = Alignment(horizontal='center', vertical='center', wrap_text=True)
+# drop the thousands of broken external defined names carried in the template
+for n in list(wb.defined_names.keys()):
+    del wb.defined_names[n]
+for ws in wb:
+    for n in list(ws.defined_names.keys()):
+        del ws.defined_names[n]
 
-# ---------------- GEN SUMMARY (copy of the estimate, formulas kept) ----------------
-gs = wb.active; gs.title = 'GEN SUMMARY'
-for row in sws.iter_rows(min_row=1, max_row=60, max_col=10):
-    for c in row:
-        if c.value is None and not c.has_style: continue
-        n = gs.cell(row=c.row, column=c.column, value=c.value)
-        if c.has_style:
-            n.font = copy.copy(c.font); n.fill = copy.copy(c.fill); n.border = copy.copy(c.border)
-            n.alignment = copy.copy(c.alignment); n.number_format = c.number_format
-for k, d in sws.column_dimensions.items():
-    gs.column_dimensions[k].width = d.width
-for m in sws.merged_cells.ranges:
-    if m.max_row <= 60: gs.merge_cells(str(m))
-gs['J5'] = 'Source: Preliminary Estimate for Priority Insurance - 2026-10-07 (rev 6), sheet "OPTION 1rev". Column H (discounted) drives the cash flow.'
-gs['J5'].font = Font(italic=True, color='808080')
+TITLE = 'CASHFLOW FORECAST FOR PROPOSED HEAD OFFICE FOR PRIORITY INSURANCE'
+DATE_TXT = 'OCTOBER, 2026'
 
-# ---------------- INPUTS ----------------
-ip = wb.create_sheet('INPUTS')
-ip['A1'] = 'PRIORITY INSURANCE HEAD OFFICE, RIDGE, ACCRA - CASH FLOW INPUTS'; ip['A1'].font = Font(bold=True, size=13)
-ip['A2'] = 'Yellow cells are inputs. Everything else in the workbook is calculated from these cells and from GEN SUMMARY.'
-ip['A2'].font = Font(italic=True, color='808080')
-for col, h in zip('ABCD', ['NAME', 'DESCRIPTION', 'VALUE', 'NOTE']):
-    c = ip[f'{col}4']; c.value = h; c.font = HDR; c.fill = HFILL; c.alignment = CTR
-inputs = [
- # name, desc, value, fmt, is_input, note
- ('ContractSum', 'Contract sum (discounted, excl. taxes)', "='GEN SUMMARY'!H50", MONEY, False, 'Linked to GEN SUMMARY H50'),
- ('TargetSum', 'Target discounted contract sum', 6250000, MONEY, True, 'Agreed discounted amount'),
- ('StartDate', 'Commencement / contract signing date', datetime.date(2026, 9, 30), 'dd mmm yyyy', True, 'Month 0'),
- ('Duration', 'Contract period (months)', 24, '0', True, ''),
- ('CompletionDate', 'Practical completion date', '=EOMONTH(StartDate,Duration)', 'dd mmm yyyy', False, ''),
- ('DLP', 'Defects liability period (months)', 6, '0', True, ''),
- ('DLPEndDate', 'End of defects liability period', '=EOMONTH(CompletionDate,DLP)', 'dd mmm yyyy', False, ''),
- ('AdvPct', 'Advance mobilisation payment (% of contract sum)', 0.25, '0.00%', True, 'As Thoroughbred Place reference (25%)'),
- ('AdvAmt', 'Advance mobilisation amount', '=ROUND(AdvPct*ContractSum,2)', MONEY, False, ''),
- ('AdvMonth', 'Advance paid in month no.', 0, '0', True, '0 = on contract signing'),
- ('RecStart', 'Advance recovery starts in month no.', 3, '0', True, ''),
- ('RecMonths', 'Advance recovered over (months)', 18, '0', True, 'Equal monthly deductions'),
- ('RecEnd', 'Advance recovery ends in month no.', '=RecStart+RecMonths-1', '0', False, 'Must be on or before Duration'),
- ('RetRate', 'Retention deducted per valuation', 0.10, '0.00%', True, ''),
- ('RetLimitPct', 'Limit of retention (% of contract sum)', 0.05, '0.00%', True, ''),
- ('RetLimit', 'Limit of retention', '=ROUND(RetLimitPct*ContractSum,2)', MONEY, False, ''),
- ('Rel1Pct', 'Retention released at practical completion', 0.5, '0.00%', True, 'Balance released at end of DLP'),
- ('Rel1Month', '1st retention release - month no.', '=Duration+1', '0', False, 'Month after practical completion (can be overwritten)'),
- ('Rel2Month', '2nd retention release - month no.', '=Duration+DLP', '0', False, 'End of DLP'),
- ('PeriodMonths', 'Months per aggregated payment (summary sheet)', 4, '0', True, 'Reference used 4-monthly payments'),
+def snapshot(ws, max_row, max_col):
+    st = {}
+    for r in range(1, max_row + 1):
+        for c in range(1, max_col + 1):
+            cell = ws._cells.get((r, c))
+            if cell is not None:
+                st[(r, c)] = copy.copy(cell._style)
+    heights = {r: ws.row_dimensions[r].height for r in range(1, max_row + 1)}
+    return st, heights
+
+def wipe(ws):
+    for m in list(ws.merged_cells.ranges):
+        ws.unmerge_cells(str(m))
+    ws._cells.clear()
+    ws.conditional_formatting = type(ws.conditional_formatting)()
+    for r in list(ws.row_dimensions.keys()):
+        del ws.row_dimensions[r]
+
+def put(ws, st, r, c, ref_rc, value=None, height_src=None):
+    cell = ws.cell(row=r, column=c)
+    if ref_rc in st:
+        cell._style = copy.copy(st[ref_rc])
+    if value is not None:
+        cell.value = value
+    return cell
+
+def set_header(ws):
+    for hdr in (ws.oddHeader, ws.firstHeader):
+        if hdr.center.text: hdr.center.text = TITLE
+        if hdr.right.text: hdr.right.text = DATE_TXT
+
+# ============================== GEN SUMMARY. ==============================
+gs = wb['GEN SUMMARY.']
+gst, gsh = snapshot(gs, 75, 26)
+wipe(gs)
+items = [  # (description, estimate amount US$ before discount) from Preliminary Estimate rev 6, OPTION 1rev col E
+ ('BILL NO. 1- PRELIMINARIES AND GENERAL ITEMS', '=366625+50000'),
+ ('BILL NO. 2- DEMOLITIONS AND ALTERATIONS', 50000),
+ ('BILL NO. 3 -SUBSTRUCTURE (ALL PROVISIONAL)', '=1585*350'),
+ ('BILL NO. 4 -SUB-BASEMENT FLOOR', '=1585*400'),
+ ('BILL NO. 5 - GROUND FLOOR', '=450*500'),
+ ('BILL NO. 6 - FIRST FLOOR', '=600*500'),
+ ('BILL NO. 7- SECOND FLOOR', '=600*500'),
+ ('BILL NO. 8 -THIRD FLOOR', '=600*500'),
+ ('BILL NO. 9 -FOURTH FLOOR', '=600*500'),
+ ('BILL NO. 10 - FIFTH FLOOR', '=600*500'),
+ ('BILL NO. 11 - KITCHEN CABINETRY/WALL CLADDING', 134515.22004867764),
+ ('BILL NO. 12. PLUMBING, FIRE-FIGHTING AND MECHANICAL', '=659925+125000'),
+ ('BILL NO. 13: ELECTRICAL WORKS', '=1026550+50000'),
+ ('BILL NO. 14. EXTERNAL FAÇADE WORKS', '=606968.250712613+50000'),
+ ('BILL NO. 15.- EXTERNAL WORKS (ALL PROVISIONAL)', 47193.43552502702),
+ ('DESIGN FEES', 194211.36000723258),
+ ('PROJECT MANAGEMENT FEES', '=623262.5-175000'),
 ]
-r = 5
-for name, desc, val, fmt, is_in, note in inputs:
-    ip[f'A{r}'] = name; ip[f'B{r}'] = desc; ip[f'C{r}'] = val; ip[f'D{r}'] = note
-    ip[f'C{r}'].number_format = fmt
-    for col in 'ABCD': ip[f'{col}{r}'].border = BOX
-    if is_in: ip[f'C{r}'].fill = INFILL
-    wb.defined_names[name] = DefinedName(name, attr_text=f"INPUTS!$C${r}")
-    r += 1
-for col, w in zip('ABCD', [16, 50, 18, 48]): ip.column_dimensions[col].width = w
-ip['A4'].alignment = CTR
-CHECK_ROW0 = r + 2
+LET = list('ABCDEFGHJKLMNPQRS')
+for r in range(1, 5):
+    put(gs, gst, r, 1, (r, 1))
+gs['A1'] = 'PROJECT: PROPOSED HEAD OFFICE FOR PRIORITY INSURANCE'
+gs['A2'] = 'LOCATION: RIDGE, ACCRA'
+gs['A3'] = 'CLIENT: PRIORITY INSURANCE'
+gs['A4'] = 'DATE: 07/10/2026 (PRELIMINARY ESTIMATE REV. 6)'
+for c in range(1, 7):
+    put(gs, gst, 5, c, (5, c))
+gs['A5'] = 'ITEM'; gs['B5'] = 'GENERAL SUMMARY'; gs['D5'] = 'AMOUNT USD'; gs['E5'] = 'DISCOUNTED AMOUNT USD'
+gs['E5']._style = copy.copy(gst[(5, 4)])
+for c in range(1, 7): put(gs, gst, 6, c, (6, c))
+GS_ROWS = []
+r = 7
+for i, (desc, amt) in enumerate(items):
+    for c in range(1, 7):
+        put(gs, gst, r, c, (7, c)); put(gs, gst, r + 1, c, (8, c))
+    gs.cell(r, 5)._style = copy.copy(gst[(7, 4)])
+    gs.cell(r, 1).value = LET[i]; gs.cell(r, 2).value = desc; gs.cell(r, 4).value = amt
+    GS_ROWS.append(r); r += 2
+last_item = r - 2
+SUB1, DISC, AGREED, TOTW, SIGN, DATER = r + 3, r + 5, r + 7, r + 10, r + 13, r + 16
+for rr, src in ((SUB1, 48), (DISC, 50), (AGREED, 50), (TOTW, 64), (SIGN, 67), (DATER, 70)):
+    for c in range(1, 7):
+        put(gs, gst, rr, c, (src, c))
+    if (src, 4) in gst: gs.cell(rr, 5)._style = copy.copy(gst[(src, 4)])
+gs[f'B{SUB1}'] = 'SUB - TOTAL (1)'; gs[f'C{SUB1}'] = 'US $'
+gs[f'D{SUB1}'] = f'=SUM(D7:D{last_item + 1})'; gs[f'E{SUB1}'] = f'=SUM(E7:E{last_item + 1})'
+gs[f'B{DISC}'] = 'LESS: DISCOUNT'; gs[f'D{DISC}'] = f'=D{SUB1}-D{AGREED}'
+gs[f'B{AGREED}'] = 'AGREED DISCOUNTED CONTRACT SUM'; gs[f'D{AGREED}'] = 6250000
+gs[f'B{TOTW}'] = 'TOTAL COST OF THE WORKS (EXCLUDING TAXES)'; gs[f'C{TOTW}'] = 'US $'
+gs[f'D{TOTW}'] = f'=D{SUB1}-D{DISC}'; gs[f'E{TOTW}'] = f'=E{SUB1}'
+gs[f'B{SIGN}'] = 'SIGNED: ……………………………………………………………'
+gs[f'B{DATER}'] = 'DATE: ………………………………………...........………….'
+for rr in GS_ROWS:   # discount spread pro-rata, as in the estimate
+    gs[f'E{rr}'] = f'=D{rr}*$D${AGREED}/$D${SUB1}'
+for rr, h in gsh.items():
+    if h: gs.row_dimensions[rr].height = h
+gs.column_dimensions['E'].width = gs.column_dimensions['D'].width
+gs.print_area = f'A1:F{DATER + 2}'
 
-# ---------------- CASHFLOW ----------------
-cf = wb.create_sheet(' CASHFLOW')
-NM = 37                      # months 0..36 (covers 24 + 6 DLP with room to extend)
-FC = 11                      # first month column = K
-LC = FC + NM - 1             # last month column
-TOT = LC + 1; CHK = LC + 2; END = LC + 3
-fcL, lcL, totL, chkL, endL = CL(FC), CL(LC), CL(TOT), CL(CHK), CL(END)
+# ============================== CASHFLOW ==============================
+cf = wb[' CASHFLOW']
+cst, csh = snapshot(cf, 120, 56)
+wipe(cf)
+NMONTH = 25                     # months 0..24
+MC = [5 + k for k in range(NMONTH)]           # E..AC
+REL1, REL2 = 5 + NMONTH, 6 + NMONTH           # AD, AE
+TOT = REL2 + 1                                # AF
+PS, PD = TOT + 2, TOT + 3                     # AH start month, AI duration
+ALLM = MC + [REL1, REL2]
+fL, lL, totL = CL(MC[0]), CL(REL2), CL(TOT)
+def refcol(c):  # template column whose style a new column takes
+    if c <= 4: return c
+    if c in MC: return c
+    if c == REL1: return 42
+    if c == REL2: return 43
+    if c == TOT: return 44
+    return 44
+def row_style(r_new, r_ref, upto=TOT):
+    for c in range(1, upto + 1):
+        put(cf, cst, r_new, c, (r_ref, refcol(c)))
+    if csh.get(r_ref): cf.row_dimensions[r_new].height = csh[r_ref]
 
-cf['A1'] = 'PROJECT: PROPOSED HEAD OFFICE FOR PRIORITY INSURANCE'
-cf['A2'] = 'LOCATION: RIDGE, ACCRA     CLIENT: PRIORITY INSURANCE'
-cf['A3'] = '="CASH FLOW FORECAST - CONTRACT SUM US$ "&TEXT(ContractSum,"#,##0.00")&" - "&TEXT(StartDate,"dd mmm yyyy")&" TO "&TEXT(CompletionDate,"dd mmm yyyy")&", DLP TO "&TEXT(DLPEndDate,"mmm yyyy")'
-for a in ('A1', 'A2', 'A3'): cf[a].font = BOLD
-
-heads = ['ITEM', 'DESCRIPTION', 'AMOUNT (US$)', 'PH.1 START MONTH', 'PH.1 DURATION (MONTHS)', 'PH.1 %',
-         'PH.2 START MONTH', 'PH.2 DURATION (MONTHS)', 'PH.2 %', '']
-for i, h in enumerate(heads, 1):
-    c = cf.cell(row=5, column=i, value=h)
-for i in range(1, END + 1):
-    c = cf.cell(row=5, column=i); c.font = HDR; c.fill = HFILL; c.alignment = CTR; c.border = BOX
-cf.cell(row=5, column=TOT, value='TOTAL'); cf.cell(row=5, column=CHK, value='CHECK (TOTAL - AMOUNT)')
-cf.cell(row=5, column=END, value='LAST MONTH')
-cf['B6'] = 'Month no.'; cf['B7'] = 'Month ending'
-for k in range(NM):
-    col = FC + k; L = CL(col)
-    cf.cell(row=5, column=col, value=f'M{k}')
-    cf.cell(row=6, column=col, value=0 if k == 0 else f'={CL(col-1)}6+1').alignment = CTR
-    d = cf.cell(row=7, column=col, value=f'=EOMONTH(StartDate,{L}$6)'); d.number_format = 'mmm-yy'; d.alignment = CTR
-    cf.column_dimensions[L].width = 12.5
-for rr in (6, 7):
-    for col in range(1, END + 1): cf.cell(row=rr, column=col).fill = SUBFILL; cf.cell(row=rr, column=col).font = BOLD
-
-# bill rows: (GEN SUMMARY row, p1start, p1dur, p1pct, p2start, p2dur, basis note)
+# parameters table location is fixed after bills; compute bills first
+# sub-row spec: (description, %, start month, duration)
+def floor(name, s, L, f, F):
+    return [(f'(0%) Start of {name} Structure', 0.3, s, L - 1), ('(100%) Completion of Structure', 0.2, s + L - 1, 1),
+            ('(0%) Start of Finishings and MEP', 0.3, f, F - 2), ('(100%) Completion of Finishings and MEP', 0.2, f + F - 2, 2)]
 bills = [
- (7, 1, 1, 0.50, 2, 23),   # Prelims: 50% possession/hoarding/set-up in M1, 50% maintenance M2-M24
- (9, 1, 1, 0.80, 2, 1),    # Demolitions 80% start / 20% completion
- (11, 1, 2, 0.50, 3, 2),   # Substructure: procurement 50%, works 50%
- (13, 3, 4, 0.50, 7, 12),  # Sub-basement: structure 50%, finishes & MEP 50%
- (15, 5, 3, 0.50, 8, 13),  # Ground
- (17, 7, 3, 0.50, 10, 12), # First
- (19, 9, 3, 0.50, 12, 10), # Second
- (21, 11, 3, 0.50, 14, 9), # Third
- (23, 13, 3, 0.50, 16, 7), # Fourth
- (25, 15, 3, 0.50, 18, 5), # Fifth
- (27, 16, 1, 0.70, 20, 3), # Kitchen cabinetry: 70% order, 30% install
- (29, 4, 15, 0.60, 19, 5), # Plumbing/FF/mech: 1st fix 60%, 2nd fix & commissioning 40%
- (31, 4, 15, 0.60, 19, 5), # Electrical
- (33, 12, 3, 0.70, 15, 8), # Facade: procurement 70%, installation 30%
- (35, 20, 3, 0.50, 23, 2), # External works
- (37, 1, 1, 0.50, 2, 11),  # Design fees
- (39, 1, 12, 0.50, 13, 12),# PM fees - even over 24 months
+ [('(100%) Site Possession and Hoarding', 0.3, 1, 1), ('(100%) Site Setup and Mobilization', 0.2, 2, 1), ('(100%) Site Maintenance', 0.5, 3, 22)],
+ [('(0%) Start of Demolition Works', 0.8, 1, 1), ('(100%) End of Demolition Works', 0.2, 2, 1)],
+ [('Procurement Phase I (Substructure materials on site and in transit) (0%)', 0.5, 1, 2), ('(50%) Completion of Ground Works', 0.25, 3, 1), ('(100%) Completion of Substructure Concrete Works', 0.25, 4, 1)],
+ floor('Sub-Basement Floor', 3, 4, 7, 12),
+ floor('Ground Floor', 5, 3, 8, 13),
+ floor('First Floor', 7, 3, 10, 12),
+ floor('Second Floor', 9, 3, 12, 10),
+ floor('Third Floor', 11, 3, 14, 9),
+ floor('Fourth Floor', 13, 3, 16, 7),
+ floor('Fifth Floor', 15, 3, 18, 5),
+ [('(0%) Start of Kitchen Cabinetry/Wall Cladding works', 0.7, 16, 1), ('100% of works fabricated', 0.2, 19, 2), ('100% of works installed on site', 0.1, 22, 1)],
+ [('First fix, sleeves and pipework', 0.6, 4, 15), ('Second fix, testing and commissioning', 0.4, 19, 5)],
+ [('First fix, conduits and containment', 0.6, 4, 15), ('Second fix, testing and commissioning', 0.4, 19, 5)],
+ [('Procurement and fabrication of facade materials', 0.7, 12, 3), ('Installation of facade', 0.3, 15, 8)],
+ [('(50%) External works', 0.5, 20, 3), ('(100%) Completion of External works', 0.5, 23, 2)],
+ [('Design fees - 1st instalment', 0.5, 1, 1), ('Design fees - balance', 0.5, 2, 11)],
+ [('Monthly project management', 1.0, 1, 24)],
 ]
-R0 = 9
-for i, (g, s1, d1, p1, s2, d2) in enumerate(bills):
-    rr = R0 + i
-    cf[f'A{rr}'] = f"='GEN SUMMARY'!A{g}"
-    cf[f'B{rr}'] = f"=TRIM('GEN SUMMARY'!B{g})"
-    cf[f'C{rr}'] = f"='GEN SUMMARY'!H{g}"
-    cf[f'D{rr}'] = s1; cf[f'E{rr}'] = d1; cf[f'F{rr}'] = p1
-    cf[f'G{rr}'] = s2; cf[f'H{rr}'] = d2; cf[f'I{rr}'] = f'=1-F{rr}'
-    for col in 'DEFGH': cf[f'{col}{rr}'].fill = INFILL
-    for col in 'FI': cf[f'{col}{rr}'].number_format = '0%'
-    cf[f'C{rr}'].number_format = MONEY
-    for k in range(NM):
-        L = CL(FC + k)
-        cf[f'{L}{rr}'] = (f'=IF(AND($E{rr}>0,{L}$6>=$D{rr},{L}$6<$D{rr}+$E{rr}),$C{rr}*$F{rr}/$E{rr},0)'
-                          f'+IF(AND($H{rr}>0,{L}$6>=$G{rr},{L}$6<$G{rr}+$H{rr}),$C{rr}*$I{rr}/$H{rr},0)')
-        cf[f'{L}{rr}'].number_format = MONEY
-    cf[f'{totL}{rr}'] = f'=SUM({fcL}{rr}:{lcL}{rr})'
-    cf[f'{chkL}{rr}'] = f'=ROUND({totL}{rr}-C{rr},2)'
-    cf[f'{endL}{rr}'] = f'=MAX(IF(E{rr}>0,D{rr}+E{rr}-1,0),IF(H{rr}>0,G{rr}+H{rr}-1,0))'
-    for col in (TOT, CHK): cf.cell(row=rr, column=col).number_format = MONEY
-RN = R0 + len(bills) - 1      # last bill row (25)
-RT = RN + 1                   # bill total row
-cf[f'B{RT}'] = 'TOTAL OF BILLS (= CONTRACT SUM)'
-cf[f'C{RT}'] = f'=SUM(C{R0}:C{RN})'; cf[f'C{RT}'].number_format = MONEY
-
-# summary rows
-rows = {}
-def srow(key, label, fn, fill=None, bold=False, fmt=MONEY, total=True):
-    rr = srow.r; rows[key] = rr; srow.r += 1
-    cf[f'B{rr}'] = label
-    for k in range(NM):
-        L, P = CL(FC + k), CL(FC + k - 1)
-        cf[f'{L}{rr}'] = fn(L, P, k); cf[f'{L}{rr}'].number_format = fmt
-    if total:
-        cf[f'{totL}{rr}'] = f'=SUM({fcL}{rr}:{lcL}{rr})'; cf[f'{totL}{rr}'].number_format = fmt
-    for col in range(1, END + 1):
-        c = cf.cell(row=rr, column=col)
-        if fill: c.fill = fill
-        if bold: c.font = BOLD
-srow.r = RT
-# reuse RT row for monthly valuation total
-cf[f'B{RT}'] = 'ESTIMATED MONTHLY VALUATION (WORK DONE)'
-srow('val', 'ESTIMATED MONTHLY VALUATION (WORK DONE)', lambda L, P, k: f'=SUM({L}{R0}:{L}{RN})', SUBFILL, True)
-srow('cumval', 'CUMULATIVE VALUATION', lambda L, P, k: (f'={L}{RT}' if k == 0 else f'={P}{RT+1}+{L}{RT}'), total=False)
-srow('pct', 'CUMULATIVE % COMPLETE', lambda L, P, k: f'={L}{RT+1}/ContractSum', fmt='0.0%', total=False)
-srow.r += 1
-v = rows['val']
-srow('adv', 'ADD: ADVANCE MOBILISATION PAYMENT', lambda L, P, k: f'=IF({L}$6=AdvMonth,AdvAmt,0)')
-srow('ret', 'LESS: RETENTION DEDUCTED', None or (lambda L, P, k: '0'), total=True)  # placeholder, filled below
-srow('cumret', 'CUMULATIVE RETENTION DEDUCTED', lambda L, P, k: '0', total=False)
-srow('rel', 'ADD: RETENTION RELEASED', lambda L, P, k: '0')
-srow('held', 'RETENTION HELD (BALANCE)', lambda L, P, k: '0', total=False)
-srow('rec', 'LESS: ADVANCE RECOVERY', lambda L, P, k: f'=IF(AND({L}$6>=RecStart,{L}$6<=RecEnd),AdvAmt/RecMonths,0)')
-srow('cumrec', 'CUMULATIVE ADVANCE RECOVERED', lambda L, P, k: '0', total=False)
-srow.r += 1
-srow('pay', 'ESTIMATED MONTHLY PAYMENT', lambda L, P, k: '0', TOTFILL, True)
-srow('cumpay', 'CUMULATIVE MONTHLY PAYMENT', lambda L, P, k: '0', TOTFILL, True, total=False)
-R = rows
-for k in range(NM):
-    L, P = CL(FC + k), CL(FC + k - 1)
-    prev = lambda key: ('0' if k == 0 else f'{P}{R[key]}')
-    cf[f'{L}{R["ret"]}'] = f'=MIN(RetRate*{L}{v},MAX(0,RetLimit-{prev("cumret")}))'
-    cf[f'{L}{R["cumret"]}'] = f'={prev("cumret")}+{L}{R["ret"]}'
-    cf[f'{L}{R["rel"]}'] = (f'=IF({L}$6=Rel1Month,ROUND(Rel1Pct*{L}{R["cumret"]},2),0)'
-                            f'+IF({L}$6=Rel2Month,{L}{R["cumret"]}-SUM(${fcL}{R["rel"]}:{P if k else L}{R["rel"]})*{0 if k == 0 else 1},0)')
-    if k == 0:
-        cf[f'{L}{R["rel"]}'] = (f'=IF({L}$6=Rel1Month,ROUND(Rel1Pct*{L}{R["cumret"]},2),0)'
-                                f'+IF({L}$6=Rel2Month,{L}{R["cumret"]},0)')
-    cf[f'{L}{R["held"]}'] = f'={L}{R["cumret"]}-SUM(${fcL}{R["rel"]}:{L}{R["rel"]})'
-    cf[f'{L}{R["cumrec"]}'] = f'={prev("cumrec")}+{L}{R["rec"]}'
-    cf[f'{L}{R["pay"]}'] = f'={L}{v}+{L}{R["adv"]}-{L}{R["ret"]}+{L}{R["rel"]}-{L}{R["rec"]}'
-    cf[f'{L}{R["cumpay"]}'] = f'={prev("cumpay")}+{L}{R["pay"]}'
-for key in ('ret', 'rel', 'rec', 'pay'):
-    cf[f'{chkL}{R[key]}'] = None
-cf[f'{chkL}{R["pay"]}'] = f'=ROUND({totL}{R["pay"]}-ContractSum,2)'; cf[f'{chkL}{R["pay"]}'].number_format = MONEY
-cf[f'{chkL}{v}'] = f'=ROUND({totL}{v}-ContractSum,2)'; cf[f'{chkL}{v}'].number_format = MONEY
-
-# notes / basis
-nr = R['cumpay'] + 3
-notes = [
- 'NOTES:',
- '1. Taxes (VAT, NHIL, GETFund, COVID levies) are NOT included. Amounts are the discounted figures in GEN SUMMARY column H.',
- '2. Each bill is spread over two phases: Phase 1 (start month, duration, %) and Phase 2 (start month, duration, balance %). Edit the yellow cells to re-programme.',
- '3. Phasing basis: Floors 50% structure / 50% finishes & MEP fit-out; MEP 60% first fix / 40% second fix & commissioning; Facade 70% procurement / 30% installation; Kitchen 70% order / 30% installation; Prelims 50% possession & set-up / 50% maintenance.',
- '4. Retention at RetRate of each valuation, stopping when the limit (RetLimit) is reached; Rel1Pct released the month after practical completion, balance at the end of the DLP.',
- '5. Advance mobilisation paid on signing and recovered in equal monthly deductions from RecStart to RecEnd.',
- '6. Payments shown in the month of the valuation (month ending dates). Months beyond the end of the DLP are shaded grey and should total zero.',
+# layout rows
+r = 3
+ADV_ROW, ADV_SUB = 3, 4
+r = 6
+bill_rows = []
+for subs in bills:
+    bill_rows.append((r, list(range(r + 1, r + 1 + len(subs)))))
+    r += len(subs) + 2
+LASTB = r - 1
+V = r              # ESTIMATED MONTHLY VALUATION
+CV, RET, CRET, SUBT, ADVR, CADV, PAY, CPAY = V + 1, V + 2, V + 3, V + 4, V + 5, V + 6, V + 7, V + 8
+T0 = CPAY + 2      # parameter table header
+P = {}             # parameter name -> row
+params = [
+ ('CSUM', 'A', 'AGREED CONTRACT SUM (DISCOUNTED, LESS TAXES)', f"='GEN SUMMARY.'!D{TOTW}", 'money'),
+ ('RLIM', 'B', 'LIMIT OF RETENTION', None, 'money'),
+ ('ADVP', 'C', 'ADVANCE MOBILIZATION (% OF CONTRACT SUM)', 0.25, 'pct'),
+ ('RETP', 'D', 'RETENTION DEDUCTED PER VALUATION', 0.10, 'pct'),
+ ('RLIMP', 'E', 'LIMIT OF RETENTION (% OF CONTRACT SUM)', 0.05, 'pct'),
+ ('REL1P', 'F', 'RETENTION RELEASED AT PRACTICAL COMPLETION', 0.5, 'pct'),
+ ('START', 'G', 'COMMENCEMENT DATE (MONTH 0)', datetime.date(2026, 9, 30), 'date'),
+ ('DUR', 'H', 'CONTRACT PERIOD (MONTHS)', 24, 'num'),
+ ('PCD', 'J', 'PRACTICAL COMPLETION DATE', None, 'date'),
+ ('DLP', 'K', 'DEFECTS LIABILITY PERIOD (MONTHS)', 6, 'num'),
+ ('DLPD', 'L', 'END OF DEFECTS LIABILITY PERIOD', None, 'date'),
+ ('RS', 'M', 'ADVANCE REPAYMENT STARTS (MONTH NO.)', 3, 'num'),
+ ('RN', 'N', 'ADVANCE REPAYMENT PERIOD (MONTHS)', 18, 'num'),
 ]
+for i, p in enumerate(params): P[p[0]] = T0 + 1 + i
+A = lambda k: f'$C${P[k]}'
+cf.cell(1, 1)
+# ---- header rows 1-2
+row_style(1, 1); row_style(2, 2)
+cf['A1'] = 'ITEM '; cf['B1'] = 'DESCRIPTION'; cf['D1'] = 'TOTAL'
+for k, c in enumerate(ALLM):
+    L = CL(c)
+    if c in MC:
+        cf.cell(2, c).value = 0 if k == 0 else f'={CL(c-1)}2+1'
+    cf.cell(1, c).value = f'=EOMONTH({A("START")},{L}2)'
+cf.cell(2, REL1).value = f'={A("DUR")}+1'
+cf.cell(2, REL2).value = f'={A("DUR")}+{A("DLP")}'
+cf.cell(1, TOT).value = 'TOTAL'
+for c, h in ((PS, 'START MONTH'), (PD, 'DURATION (MONTHS)')):
+    cf.cell(1, c)._style = copy.copy(cst[(1, 44)]); cf.cell(1, c).value = h
+    cf.cell(2, c)._style = copy.copy(cst[(2, 44)])
+    cf.column_dimensions[CL(c)].width = 22
+
+def month_formula(L, br, subs):
+    terms = [f'IF(AND({L}$2>=${CL(PS)}{s},{L}$2<${CL(PS)}{s}+${CL(PD)}{s}),$D{s}/${CL(PD)}{s},0)' for s in subs]
+    return '=' + '+'.join(terms)
+
+def write_bill(br, subs, item, desc_f, amt_f, sub_specs, hdr_ref=6, sub_ref=7, blank_ref=10):
+    row_style(br, hdr_ref)
+    cf.cell(br, 1).value = item; cf.cell(br, 2).value = desc_f; cf.cell(br, 4).value = amt_f
+    for c in ALLM:
+        cf.cell(br, c).value = month_formula(CL(c), br, subs)
+    cf.cell(br, TOT).value = f'=SUM({fL}{br}:{lL}{br})'
+    for s, (d, pct, st, du) in zip(subs, sub_specs):
+        row_style(s, sub_ref)
+        cf.cell(s, 2).value = d; cf.cell(s, 3).value = pct; cf.cell(s, 3).number_format = '0%'
+        cf.cell(s, 4).value = f'=C{s}*$D${br}'
+        for c, v in ((PS, st), (PD, du)):
+            x = cf.cell(s, c); x._style = copy.copy(cst[(7, 44)]); x.value = v; x.number_format = '0'
+    row_style(subs[-1] + 1, blank_ref)
+
+# advance
+write_bill(ADV_ROW, [ADV_SUB], 'A', 'ADVANCE MOBILIZATION', f'={A("ADVP")}*{A("CSUM")}',
+           [('Contract Signing ', 1, 0, 1)], hdr_ref=3, sub_ref=4, blank_ref=5)
+for i, ((br, subs), specs) in enumerate(zip(bill_rows, bills)):
+    g = GS_ROWS[i]
+    write_bill(br, subs, f"='GEN SUMMARY.'!A{g}", f"='GEN SUMMARY.'!B{g}", f"='GEN SUMMARY.'!E{g}", specs)
+    cf.cell(br, 1).value = LET[i + 1] if i + 1 < len(LET) else 'T'
+LETS = list('BCDEFGHJKLMNPQRST')
+for i, (br, _) in enumerate(bill_rows): cf.cell(br, 1).value = LETS[i]
+
+# ---- summary rows (template rows 96-104)
+for new, ref in zip(range(V, CPAY + 1), range(96, 105)):
+    row_style(new, ref)
+labels = ['ESTIMATED MONTHLY VALUATION (EXCL. ADVANCE)', 'CUMULATIVE VALUATION', 'DEDUCT RETENTION', 'CUMULATIVE RETENTION',
+          'SUB TOTAL ', 'ADVANCE REPAYMENT', 'CUMULATIVE ADVANCE REPAYMENT', 'ESTIMATED MONTHLY PAYMENT', 'CUMULATIVE MONTHLY PAYMENT']
+for rr, t in zip(range(V, CPAY + 1), labels): cf.cell(rr, 2).value = t
+billset = [ADV_ROW] + [b for b, _ in bill_rows]
+for idx, c in enumerate(ALLM):
+    L = CL(c); Pv = CL(c - 1)
+    first = idx == 0
+    cf[f'{L}{V}'] = '=' + '+'.join(f'{L}{b}' for b in billset[1:])
+    work = f'{L}{V}'
+    cf[f'{L}{CV}'] = f'={work}' if first else f'={Pv}{CV}+{work}'
+    prev_cret = '0' if first else f'{Pv}{CRET}'
+    if c == REL1:
+        cf[f'{L}{RET}'] = f'=-ROUND({prev_cret}*{A("REL1P")},2)'
+    elif c == REL2:
+        cf[f'{L}{RET}'] = f'=-{prev_cret}'
+    else:
+        cf[f'{L}{RET}'] = f'=MIN({A("RETP")}*{work},MAX(0,{A("RLIM")}-{prev_cret}))'
+    cf[f'{L}{CRET}'] = f'={prev_cret}+{L}{RET}'
+    cf[f'{L}{SUBT}'] = f'={L}{ADV_ROW}+{L}{V}-{L}{RET}'
+    cf[f'{L}{ADVR}'] = f'=IF(AND({L}$2>={A("RS")},{L}$2<{A("RS")}+{A("RN")}),$D${ADV_ROW}/{A("RN")},0)'
+    cf[f'{L}{CADV}'] = f'={L}{ADVR}' if first else f'={Pv}{CADV}+{L}{ADVR}'
+    cf[f'{L}{PAY}'] = f'={L}{SUBT}-{L}{ADVR}'
+    cf[f'{L}{CPAY}'] = f'={L}{PAY}' if first else f'={Pv}{CPAY}+{L}{PAY}'
+for rr in (V, RET, SUBT, ADVR, PAY):
+    cf[f'{totL}{rr}'] = f'=SUM({fL}{rr}:{lL}{rr})'
+cf.conditional_formatting.add(f'{fL}{PAY}:{totL}{PAY}', ColorScaleRule(start_type='min', start_color='F8696B', mid_type='percentile', mid_value=50, mid_color='FFEB84', end_type='max', end_color='63BE7B'))
+cf.conditional_formatting.add(f'D{PAY}:{totL}{PAY}', ColorScaleRule(start_type='min', start_color='F8696B', mid_type='percentile', mid_value=50, mid_color='FFEB84', end_type='max', end_color='63BE7B'))
+
+# ---- parameter table (template rows 106-108)
+row_style(T0, 106, upto=4)
+cf[f'A{T0}'] = 'ITEM'; cf[f'B{T0}'] = 'DESCRIPTION'; cf[f'C{T0}'] = 'AMOUNT'
+for key, item, desc, val, kind in params:
+    rr = P[key]; row_style(rr, 107, upto=4)
+    cf[f'A{rr}'] = item; cf[f'B{rr}'] = desc; cf[f'C{rr}'] = val
+    cf[f'C{rr}'].number_format = {'money': cst[(107, 3)] and cf[f'C{rr}'].number_format, 'pct': '0%', 'date': 'dd mmmm yyyy', 'num': '0'}[kind]
+cf[f'C{P["RLIM"]}'] = f'={A("RLIMP")}*{A("CSUM")}'
+cf[f'C{P["PCD"]}'] = f'=EOMONTH({A("START")},{A("DUR")})'
+cf[f'C{P["DLPD"]}'] = f'=EOMONTH(C{P["PCD"]},{A("DLP")})'
+CHK = T0 + len(params) + 2
+row_style(CHK, 108, upto=4)
+cf[f'A{CHK}'] = ''; cf[f'B{CHK}'] = 'CHECK: TOTAL PAYMENT LESS CONTRACT SUM (MUST BE NIL)'
+cf[f'C{CHK}'] = f'=ROUND({totL}{PAY}-{A("CSUM")},2)'
+NT = CHK + 3
+notes = ['NOTES:', '1. TAXES NOT INCLUDED ', '2. PAYMENTS PROJECTED TO BE AT THE END OF THE RESPECTIVE MONTHS.',
+         f'3. EACH BILL IS SPREAD OVER ITS SUB-ITEMS USING THE START MONTH AND DURATION IN COLUMNS {CL(PS)} AND {CL(PD)}; AMOUNTS LINK TO GEN SUMMARY.',
+         '4. RETENTION IS DEDUCTED UNTIL THE LIMIT OF RETENTION IS REACHED; HALF IS RELEASED THE MONTH AFTER PRACTICAL COMPLETION AND THE BALANCE AT THE END OF THE DEFECTS LIABILITY PERIOD.']
 for i, t in enumerate(notes):
-    cf[f'B{nr+i}'] = t
-    if i == 0: cf[f'B{nr+i}'].font = BOLD
+    row_style(NT + i, 111 + min(i, 2), upto=4); cf[f'B{NT + i}'] = t
 
-cf.column_dimensions['A'].width = 6; cf.column_dimensions['B'].width = 46; cf.column_dimensions['C'].width = 15
-for col in 'DEFGHI': cf.column_dimensions[col].width = 9.5
-cf.column_dimensions['J'].width = 2
-cf.column_dimensions[totL].width = 15; cf.column_dimensions[chkL].width = 13; cf.column_dimensions[endL].width = 9
-cf.row_dimensions[5].height = 45
-cf.freeze_panes = f'{fcL}8'
-grey = PatternFill('solid', fgColor='EDEDED')
-cf.conditional_formatting.add(f'{fcL}5:{lcL}{R["cumpay"]}',
-    FormulaRule(formula=[f'{fcL}$6>Rel2Month'], fill=grey, font=Font(color='A6A6A6')))
-red = PatternFill('solid', fgColor='F8CBAD')
-cf.conditional_formatting.add(f'{chkL}{R0}:{chkL}{R["pay"]}', FormulaRule(formula=[f'ABS({chkL}{R0})>0.005'], fill=red))
-cf.conditional_formatting.add(f'{endL}{R0}:{endL}{RN}', FormulaRule(formula=[f'{endL}{R0}>Duration'], fill=red))
-cf.conditional_formatting.add(f'{fcL}{R["pay"]}:{lcL}{R["pay"]}', FormulaRule(formula=[f'{fcL}{R["pay"]}<0'], fill=red))
+# column widths: month columns take the template widths of the matching columns
+oldw = {k: v.width for k, v in cf.column_dimensions.items()}
+for k in list(cf.column_dimensions.keys()):
+    if openpyxl.utils.column_index_from_string(k) > 4: del cf.column_dimensions[k]
+for c in ALLM + [TOT]:
+    cf.column_dimensions[CL(c)].width = 24
+cf.column_dimensions[CL(TOT + 1)].width = 4
+for c in (PS, PD): cf.column_dimensions[CL(c)].width = 22
+cf.print_area = f'A1:{totL}{NT + len(notes)}'
+cf.freeze_panes = 'E3'
 
-# ---------------- CASHFLOW SUMMARY ----------------
-sm = wb.create_sheet('CASHFLOW SUMMARY', 1)
-sm['A1'] = 'PRIORITY INSURANCE HEAD OFFICE - PROPOSED CASH FLOW'; sm['A1'].font = Font(bold=True, size=13)
-sm['A2'] = '="Contract sum (discounted, excl. taxes): US$ "&TEXT(ContractSum,"#,##0.00")'
-sm['A4'] = 'PROPOSED CASH FLOW AGGREGATED'; sm['A4'].font = BOLD
-sm['A5'] = '="Every "&PeriodMonths&" months (change PeriodMonths on INPUTS)"'; sm['A5'].font = Font(italic=True, color='808080')
-for col, h in zip('ABCDE', ['PAYMENT NO.', 'PAYMENT DATE', 'MONTHS COVERED', 'AMOUNT (US$)', 'CUMULATIVE (US$)']):
-    c = sm[f'{col}6']; c.value = h; c.font = HDR; c.fill = HFILL; c.alignment = CTR; c.border = BOX
-MROW = f"' CASHFLOW'!${fcL}$6:${lcL}$6"
-PROW = f"' CASHFLOW'!${fcL}${R['pay']}:${lcL}${R['pay']}"
-VROW = f"' CASHFLOW'!${fcL}${v}:${lcL}${v}"
-NP = 12
-# payment 1 = advance month(s) up to AdvMonth, then periods
-a0 = 7
-sm[f'A{a0}'] = 'PMT 1 (ADV.)'
-sm[f'B{a0}'] = '=EOMONTH(StartDate,AdvMonth)'
-sm[f'C{a0}'] = '="M0 - M"&AdvMonth'
-sm[f'D{a0}'] = f'=SUMPRODUCT(({MROW}<=AdvMonth)*{PROW})'
-sm[f'E{a0}'] = f'=D{a0}'
-for i in range(1, NP + 1):
-    rr = a0 + i
-    lo = f'(AdvMonth+1+({i}-1)*PeriodMonths)'; hi = f'MIN(AdvMonth+{i}*PeriodMonths,Rel2Month)'
-    show = f'{lo}<=Rel2Month'
-    sm[f'A{rr}'] = f'=IF({show},"PMT {i+1}","")'
-    sm[f'B{rr}'] = f'=IF({show},EOMONTH(StartDate,{hi}),"")'
-    sm[f'C{rr}'] = f'=IF({show},"M"&{lo}&" - M"&{hi},"")'
-    sm[f'D{rr}'] = f'=IF({show},SUMPRODUCT(({MROW}>={lo})*({MROW}<={hi})*{PROW}),"")'
-    sm[f'E{rr}'] = f'=IF({show},E{rr-1}+D{rr},"")'
-at = a0 + NP + 1
-sm[f'A{at}'] = 'TOTAL PAYMENT'; sm[f'D{at}'] = f'=SUM(D{a0}:D{at-1})'
-sm[f'C{at}'] = 'Check vs contract sum:'; sm[f'E{at}'] = f'=ROUND(D{at}-ContractSum,2)'
-for col in 'ABCDE':
-    sm[f'{col}{at}'].font = BOLD; sm[f'{col}{at}'].fill = TOTFILL
-for rr in range(a0, at + 1):
-    sm[f'B{rr}'].number_format = 'mmmm, yyyy'
-    for col in 'DE': sm[f'{col}{rr}'].number_format = MONEY
-    for col in 'ABCDE': sm[f'{col}{rr}'].border = BOX
+# ============================== CASHFLOW SUMMARY ==============================
+sm = wb['CASHFLOW SUMMARY']
+sst, ssh = snapshot(sm, 60, 6)
+wipe(sm)
+def srow(rn, rref, upto=4):
+    for c in range(1, upto + 1): put(sm, sst, rn, c, (rref, c))
+    if ssh.get(rref): sm.row_dimensions[rn].height = ssh[rref]
+CFQ = "' CASHFLOW'!"
+srow(1, 1); sm['A1'] = 'PROPOSED  CASH FLOW AGGREGATED'; sm.merge_cells('A1:C1')
+srow(2, 2); sm['A2'] = 'PAYMENT NO. '; sm['B2'] = 'MONTH, YEAR'; sm['C2'] = 'AMOUNT (US$)'
+groups = [(0, 0)] + [(1 + 4 * i, 4 + 4 * i) for i in range(6)]   # advance, then 4-monthly as reference
+agg = []
+for gi, (a, b) in enumerate(groups):
+    agg.append((CL(MC[a]), CL(MC[b])))
+agg += [(CL(REL1), CL(REL1)), (CL(REL2), CL(REL2))]
+r = 3
+for i, (ca, cb) in enumerate(agg):
+    srow(r, 3 if i == 0 else 4)
+    sm[f'A{r}'] = 'PMT 1 (ADV.)' if i == 0 else f'PMT {i + 1}'
+    sm[f'B{r}'] = f'={CFQ}{cb}1'; sm[f'B{r}'].number_format = 'mmmm, yyyy'
+    sm[f'C{r}'] = f'=SUM({CFQ}{ca}{PAY}:{cb}{PAY})'
+    r += 1
+AGT = r
+srow(AGT, 14); sm[f'A{AGT}'] = 'TOTAL PAYMENT'; sm[f'C{AGT}'] = f'=SUM(C3:C{AGT - 1})'; sm.merge_cells(f'A{AGT}:B{AGT}')
+M0 = AGT + 3
+srow(M0, 17); sm[f'A{M0}'] = 'PROPOSED CASH FLOW MONTHLY'; sm.merge_cells(f'A{M0}:C{M0}')
+srow(M0 + 1, 18); sm[f'A{M0+1}'] = 'PAYMENT NO. '; sm[f'B{M0+1}'] = 'MONTH, YEAR'; sm[f'C{M0+1}'] = ' AMOUNT (US$) '
+r = M0 + 2
+for i, c in enumerate(ALLM):
+    srow(r, 19 if i == 0 else 20)
+    L = CL(c)
+    sm[f'A{r}'] = 'PMT 1 (ADV)' if i == 0 else f'PMT {i + 1}'
+    sm[f'B{r}'] = f'={CFQ}{L}1'; sm[f'B{r}'].number_format = 'mmmm, yyyy'
+    sm[f'C{r}'] = f'={CFQ}{L}{PAY}'
+    sm[f'D{r}'] = f'={CFQ}{L}{CPAY}'
+    r += 1
+MT = r
+srow(MT, 58); sm[f'A{MT}'] = 'TOTAL PAYMENT'; sm[f'C{MT}'] = f'=SUM(C{M0+2}:C{MT-1})'; sm.merge_cells(f'A{MT}:B{MT}')
+sm.print_area = f'A{M0}:D{MT}'
 
-m0 = at + 3
-sm[f'A{m0}'] = 'PROPOSED CASH FLOW MONTHLY'; sm[f'A{m0}'].font = BOLD
-for col, h in zip('ABCDEF', ['MONTH NO.', 'MONTH ENDING', 'VALUATION (US$)', 'PAYMENT (US$)', 'CUMULATIVE PAYMENT (US$)', '% OF CONTRACT PAID']):
-    c = sm[f'{col}{m0+1}']; c.value = h; c.font = HDR; c.fill = HFILL; c.alignment = CTR; c.border = BOX
-for k in range(NM):
-    rr = m0 + 2 + k
-    sm[f'A{rr}'] = k
-    sm[f'B{rr}'] = f'=EOMONTH(StartDate,A{rr})'; sm[f'B{rr}'].number_format = 'mmmm, yyyy'
-    sm[f'C{rr}'] = f'=INDEX({VROW},1,A{rr}+1)'
-    sm[f'D{rr}'] = f'=INDEX({PROW},1,A{rr}+1)'
-    sm[f'E{rr}'] = f'=D{rr}' if k == 0 else f'=E{rr-1}+D{rr}'
-    sm[f'F{rr}'] = f'=E{rr}/ContractSum'; sm[f'F{rr}'].number_format = '0.0%'
-    for col in 'CDE': sm[f'{col}{rr}'].number_format = MONEY
-    for col in 'ABCDEF': sm[f'{col}{rr}'].border = BOX
-mt = m0 + 2 + NM
-sm[f'A{mt}'] = 'TOTAL'; sm[f'C{mt}'] = f'=SUM(C{m0+2}:C{mt-1})'; sm[f'D{mt}'] = f'=SUM(D{m0+2}:D{mt-1})'
-for col in 'ABCDEF': sm[f'{col}{mt}'].font = BOLD; sm[f'{col}{mt}'].fill = TOTFILL
-for col in 'CD': sm[f'{col}{mt}'].number_format = MONEY
-sm.conditional_formatting.add(f'A{m0+2}:F{mt-1}', FormulaRule(formula=[f'$A{m0+2}>Rel2Month'], fill=grey, font=Font(color='A6A6A6')))
-for col, w in zip('ABCDEF', [16, 18, 20, 18, 22, 14]): sm.column_dimensions[col].width = w
+# ============================== CHART ==============================
+from openpyxl.chart import BarChart, Reference
+from openpyxl.chart.shapes import GraphicalProperties
+chs = wb['CASHFLOW SUMMARY CHART']
+old = chs._charts[0]
+bar = BarChart(); bar.type = 'col'; bar.title = 'PROPOSED MONTHLY CASHFLOW'; bar.legend = None
+bar.add_data(Reference(sm, min_col=3, min_row=M0 + 2, max_row=MT - 1), titles_from_data=False)
+bar.set_categories(Reference(sm, min_col=2, min_row=M0 + 2, max_row=MT - 1))
+bar.series[0].graphicalProperties = GraphicalProperties(solidFill='ED7D31')
+bar.x_axis.number_format = 'mmm yyyy'; bar.x_axis.delete = False; bar.y_axis.delete = False
+bar.y_axis.number_format = '#,##0'; bar.y_axis.majorGridlines = openpyxl.chart.axis.ChartLines()
+bar.gapWidth = 150
+bar.anchor = old.anchor
+chs._charts = [bar]
 
-# chart: monthly payment bars + cumulative line
-bar = BarChart(); bar.title = 'Monthly payment and cumulative payment (US$)'; bar.y_axis.title = 'Monthly (US$)'
-last = m0 + 2 + 30  # chart to end of DLP (month 30)
-bar.add_data(Reference(sm, min_col=4, min_row=m0 + 1, max_row=last), titles_from_data=True)
-bar.set_categories(Reference(sm, min_col=2, min_row=m0 + 2, max_row=last))
-ln = LineChart(); ln.add_data(Reference(sm, min_col=5, min_row=m0 + 1, max_row=last), titles_from_data=True)
-ln.y_axis.axId = 200; ln.y_axis.title = 'Cumulative (US$)'; ln.y_axis.crosses = 'max'
-bar.x_axis.number_format = 'mmm-yy'; bar += ln
-bar.height = 10; bar.width = 24
-sm.add_chart(bar, 'H4')
+# ============================== COVER ==============================
+cp = wb['Cover Page .']
+cp['B9'] = 'CASHFLOW FORECAST FOR PROPOSED HEAD OFFICE FOR PRIORITY INSURANCE'
+cp['F21'] = DATE_TXT
+for ws in wb: set_header(ws)
 
-# ---------------- CHECKS on INPUTS ----------------
-c0 = CHECK_ROW0
-ip[f'A{c0}'] = 'CHECKS (all should read OK)'; ip[f'A{c0}'].font = BOLD
-CFn = "' CASHFLOW'!"
-checks = [
- ('Contract sum = target US$ 6,250,000.00', 'ContractSum', 'TargetSum'),
- ('Total of bills = contract sum', f"{CFn}C{RT}", 'ContractSum'),
- ('Total valuations = contract sum', f"{CFn}{totL}{v}", 'ContractSum'),
- ('Total payments = contract sum', f"{CFn}{totL}{R['pay']}", 'ContractSum'),
- ('Summary aggregated total = contract sum', f"'CASHFLOW SUMMARY'!D{at}", 'ContractSum'),
- ('Summary monthly total = contract sum', f"'CASHFLOW SUMMARY'!D{mt}", 'ContractSum'),
- ('Advance fully recovered', f"{CFn}{totL}{R['rec']}", 'AdvAmt'),
- ('Retention deducted = limit of retention', f"{CFn}{totL}{R['ret']}", 'RetLimit'),
- ('Retention fully released', f"{CFn}{totL}{R['rel']}", f"{CFn}{totL}{R['ret']}"),
-]
-for col, h in zip('ABCD', ['CHECK', 'VALUE', 'SHOULD EQUAL', 'RESULT']):
-    c = ip[f'{col}{c0+1}']; c.value = h; c.font = HDR; c.fill = HFILL
-for i, (lab, a, b) in enumerate(checks):
-    rr = c0 + 2 + i
-    ip[f'A{rr}'] = lab; ip[f'B{rr}'] = f'={a}'; ip[f'C{rr}'] = f'={b}'
-    ip[f'D{rr}'] = f'=IF(ROUND(B{rr}-C{rr},2)=0,"OK","CHECK")'
-    for col in 'BC': ip[f'{col}{rr}'].number_format = MONEY
-rr = c0 + 2 + len(checks)
-extra = [
- ('No negative monthly payment', f"=MIN({CFn}{fcL}{R['pay']}:{lcL}{R['pay']})", 0, f'=IF(B{{r}}>=0,"OK","CHECK")'),
- ('All bills finish by practical completion', f"=MAX({CFn}{endL}{R0}:{endL}{RN})", '=Duration', f'=IF(B{{r}}<=C{{r}},"OK","CHECK")'),
- ('Advance recovered before completion', '=RecEnd', '=Duration', f'=IF(B{{r}}<=C{{r}},"OK","CHECK")'),
- ('Nothing paid after end of DLP', f"=SUMPRODUCT(({CFn}{fcL}6:{lcL}6>Rel2Month)*ABS({CFn}{fcL}{R['pay']}:{lcL}{R['pay']}))", 0, f'=IF(ROUND(B{{r}},2)=0,"OK","CHECK")'),
-]
-for lab, a, b, res in extra:
-    ip[f'A{rr}'] = lab; ip[f'B{rr}'] = a; ip[f'C{rr}'] = b; ip[f'D{rr}'] = res.format(r=rr)
-    rr += 1
-ip.conditional_formatting.add(f'D{c0+2}:D{rr}', FormulaRule(formula=[f'D{c0+2}="CHECK"'], fill=red))
-ip.conditional_formatting.add(f'D{c0+2}:D{rr}', FormulaRule(formula=[f'D{c0+2}="OK"'], fill=TOTFILL))
-ip.column_dimensions['A'].width = 42
-
-wb._sheets = [wb[n] for n in ['INPUTS', 'CASHFLOW SUMMARY', ' CASHFLOW', 'GEN SUMMARY']]
-wb.active = wb.sheetnames.index('CASHFLOW SUMMARY')
+wb.active = 0
 wb.calculation.fullCalcOnLoad = True
 wb.save(out)
-print('saved', out, 'rows', R, 'RT', RT, 'agg total row', at, 'monthly total row', mt)
+print(dict(V=V, PAY=PAY, CPAY=CPAY, T0=T0, CHK=CHK, AGT=AGT, MT=MT, M0=M0, TOTW=TOTW, SUB1=SUB1, cols=(fL, lL, totL)))
