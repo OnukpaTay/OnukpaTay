@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "sports-betting": {
+      "type": "stdio",
+      "command": "sports-betting-mcp",
+      "args": [],
+      "env": {
+        "SPORTS_BETTING_API_URL": "https://sportsbettingaianalyzer.com"
+      }
+    }
+  }
+}
