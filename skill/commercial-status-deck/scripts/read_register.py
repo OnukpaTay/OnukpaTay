@@ -121,9 +121,51 @@ def num(v):
     return float(v)
 
 
-def load(path):
+def pick_sheet(wb, want=None):
+    """Choose the sheet to read, and say why.
+
+    Registers are often kept as one workbook with a tab per week, older tabs
+    hidden. Taking sheet zero silently reads a stale week, so prefer a visible
+    sheet and, among those, the one carrying the latest report date.
+    """
+    if want:
+        if want not in wb.sheetnames:
+            sys.exit(f"no sheet named {want!r}; sheets are {wb.sheetnames}")
+        return wb[want], f"requested explicitly"
+    visible = [ws for ws in wb.worksheets if ws.sheet_state == 'visible']
+    pool = visible or list(wb.worksheets)
+    def stamp(ws):
+        for r in range(1, 4):
+            for c in range(1, 3):
+                v = ws.cell(r, c).value
+                if isinstance(v, datetime.datetime):
+                    return v.date()
+                if isinstance(v, datetime.date):
+                    return v
+                if isinstance(v, str):
+                    try:
+                        d, m, y = [int(x) for x in re.split(r'[/\-.]', v.strip())]
+                        return datetime.date(y + 2000 if y < 100 else y, m, d)
+                    except Exception:
+                        pass
+        return datetime.date.min
+    ws = max(pool, key=stamp)
+    why = []
+    if len(wb.worksheets) > 1:
+        why.append(f"{len(wb.worksheets)} sheets in the workbook")
+    if visible and len(visible) < len(wb.worksheets):
+        why.append(f"{len(wb.worksheets) - len(visible)} hidden")
+    if len(pool) > 1:
+        why.append(f"latest report date {stamp(ws)}")
+    return ws, "; ".join(why) or "only sheet"
+
+
+def load(path, sheet=None):
     wb = openpyxl.load_workbook(path, data_only=True)
-    ws = wb[wb.sheetnames[0]]
+    ws, why = pick_sheet(wb, sheet)
+    if len(wb.worksheets) > 1:
+        others = [w.title for w in wb.worksheets if w is not ws]
+        print(f"[sheet] reading {ws.title!r} ({why}); not read: {others}")
     hrow = find_header_row(ws)
     cols = map_columns(ws, hrow)
     if 'deliverable' not in cols:
@@ -257,8 +299,9 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('register')
     ap.add_argument('--compare', metavar='PREVIOUS')
+    ap.add_argument('--sheet', help='sheet name to read; default is the visible sheet with the latest report date')
     a = ap.parse_args()
-    rows, df, sheet = load(a.register)
+    rows, df, sheet = load(a.register, a.sheet)
     report(rows, df, sheet, a.register)
     if a.compare:
         old, odf, osheet = load(a.compare)
